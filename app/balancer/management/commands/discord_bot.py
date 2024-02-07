@@ -93,7 +93,7 @@ class Command(BaseCommand):
             # Check if the message is a response to the form
             if message.author != self.bot.user and message.reference:
                 original_message = await message.channel.fetch_message(message.reference.message_id)
-                if original_message.author == self.bot.user and original_message.content == self.REGISTER_MSG_TEXT:
+                if original_message.author == self.bot.user and original_message.content[22:] == self.REGISTER_MSG_TEXT:
                     fields = message.content.split(',')
                     fields.append(message.author.name)
                     print(f"Fields: {fields}")
@@ -177,9 +177,11 @@ class Command(BaseCommand):
                     await interaction.defer()
 
                     return
-
+                
+                user = self.bot.get_user(interaction.user.id)
+                mention = user.mention if user else user.name
                 await interaction.respond(
-                        content=self.REGISTER_MSG_TEXT)
+                        content=mention + " "+ self.REGISTER_MSG_TEXT)
 
                 return
 
