@@ -352,7 +352,7 @@ class Command(BaseCommand):
         command = msg.content.split(' ')[0].lower()
 
         commands = self.get_available_bot_commands()
-        free_for_all = ['!register', '!help', '!reg']
+        free_for_all = ['!register', '!help', '!reg', '!jak']
         staff_only = [
             '!vouch', '!add', '!kick', '!mmr', '!ban', '!unban',
             '!set-name', '!set-mmr', '!set-dota-id', '!record-match',
@@ -363,7 +363,7 @@ class Command(BaseCommand):
             '!register', '!vouch', '!wh', '!who', '!whois', '!profile', '!stats', '!top',
             '!streak', '!bottom', '!bot', '!afk-ping', '!afkping', '!role', '!roles', '!recent',
             '!ban', '!unban', '!votekick', '!vk', '!set-name', 'rename' '!set-mmr',
-            'adjust', '!set-dota-id', '!record-match', '!help', '!close', '!reg',
+            'adjust', '!set-dota-id', '!record-match', '!help', '!close', '!reg', '!jak', '!info',
         ]
 
         # if this is a chat channel, check if command is allowed
@@ -516,7 +516,7 @@ class Command(BaseCommand):
             f'MMR: {player.dota_mmr}\n'
             f'Dotabuff: {dotabuff}\n'
             f'Drabinka: {player_url}\n\n'
-            f'Drabinka MMR: {player.ladder_mmr}\n'
+            f'ihMMR: {player.ladder_mmr}\n'
             f'Wynik: {player.score}\n'
             f'Ranking gracza: {player.rank_score}\n'
             f'Rozegrane gry: {len(player.matches)} ({wins}-{losses})\n\n'
@@ -588,10 +588,10 @@ class Command(BaseCommand):
     async def attach_join_buttons_to_queue_msg(self, msg, **kwargs):
         await self.attach_buttons_to_msg(msg, [
             [
-                Button(label="Wchodzę",
+                Button(label="Dołącz",
                        custom_id="green-" + str(msg.id),
                        style=ButtonStyle.green),
-                Button(label="Out",
+                Button(label="Wyjdź",
                        custom_id="red-" + str(msg.id),
                        style=ButtonStyle.red),
             ]
@@ -967,6 +967,7 @@ class Command(BaseCommand):
         else:
             # wrong format, so just show help message
             await msg.channel.send(
+                '```'
                 'Wybierz pozycję wg skali 1 - 5, gdzie: \n'
                 '5 - najbardziej preferowana pozycja \n'
                 '1 - najmniej preferowana pozycja \n\n'
@@ -976,6 +977,7 @@ class Command(BaseCommand):
                 '!role 1 5 1 1 1  <- preferujesz Midlane\n'
                 '!role 5 1 1 1 5 <- preferujesz Carry oraz Hard support.\n'
                 '!role 5 5 5 5 5 <- preferujesz wszystkie role \n'
+                '```'
             )
             return
 
@@ -1048,6 +1050,20 @@ class Command(BaseCommand):
             f'Lista komend:\n\n' +
             keys_as_string +
             f'\n```\n'
+        )
+
+    async def registration_help_command(self, msg, **kwargs):
+        print('jak command')
+        await msg.channel.send(
+            f'```\n'
+            f'Instrukcja Ligi nhousowej - KROK po KROKU\n\n'
+            f'1. Rejestracja do ligi ->  wpisz **!reg**\n'
+            f'2. Odpowiadając botowi na wiadomość podaj swój obecny **MMR, STEAM_ID **( 2137, 12356789).\n'
+            f'3. Czekaj na zatwierdzenie przez ADMINA.\n'
+            f'4. Po zatwierdzeniu możesz dołączyć do kolejki na kanale <#1204430964948738110>\n'
+            f'5. Regulamin ligi znajdziesz na kanale #regulamin (kanał jeszcze nie ustalony)\n\n'
+            f'Powodzenia!\n'
+            f'```'
         )
 
     async def set_name_command(self, msg, **kwargs):
@@ -1362,14 +1378,14 @@ class Command(BaseCommand):
             game_str = f'Gra ruszyła {time_game}. Oglądaj tu: {q.game_server}\n'
 
         suffix = LadderSettings.get_solo().noob_queue_suffix
-
+        
         return f'```\n' + \
                f'Kolejka #{q.id}\n' + \
                game_str + \
-               (f'Min MMR: {q.min_mmr}\n' if show_min_mmr else '\n') + \
-               f'Gracze: {q.players.count()} (' + \
-               f' | '.join(f'{p.name}-{p.ladder_mmr}' for p in players) + ')\n\n' + \
-               f'Śr. MMR: {avg_mmr} {suffix if avg_mmr < 4000 else ""} \n' + \
+               f'Zapisani: {q.players.count()} / 10 \n\n' + \
+               f''.join(f'{p.name}  (ihMMR: {p.ladder_mmr} | MMR: {p.dota_mmr} | Pozycja#{p.rank_ladder_mmr})  \n' for p in players) + '\n' + \
+               f'Śr. ihMMR: {avg_mmr} {suffix if avg_mmr < 4000 else ""} \n' + \
+               f'Śr. MMR: {round(mean(p.dota_mmr for p in players))} \n' + \
                f'```'
 
     @staticmethod
@@ -1440,8 +1456,8 @@ class Command(BaseCommand):
 
             msg = await channel.send(
                 " ".join(self.player_mention(p) for p in ping_list) +
-                f"\nMinęła chwila. Daj reakcje, jeśli jesteś w pobliżu" +
-                f"Masz `{afk_response_time} minut`.\n"
+                f"\nMinęło ponad 20min od Twojego zapisu do kolejki.\n"
+                f"Daj reakcję 👍  jeśli nadal chcesz pozostać w kolejce, w przeciwnym razie zostaniesz wykluczony. \n"
             )
             await msg.add_reaction('👌')
             await asyncio.sleep(afk_response_time * 60)
@@ -1461,7 +1477,7 @@ class Command(BaseCommand):
         if deleted > 0:
             await self.queues_show()
             await channel.send(
-                'Śmierć heretykom! Wyrzucić ich wszystkich z kolejki\n' +
+                'Zostałeś wykluczony z kolejki ze względu na brak aktywności.\n' +
                 '```\n' +
                 ' | '.join(p.name for p in afk_list) +
                 '\n```'
@@ -1870,5 +1886,7 @@ class Command(BaseCommand):
             '!record-match': self.record_match_command,
             '!help': self.help_command,
             '!close': self.close_queue_command,
-            '!reg': self.attach_help_buttons_to_msg
+            '!reg': self.attach_help_buttons_to_msg,
+            '!jak': self.registration_help_command,
+            '!info': self.registration_help_command,
         }
