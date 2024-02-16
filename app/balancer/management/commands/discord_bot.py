@@ -177,11 +177,13 @@ class Command(BaseCommand):
                     await interaction.defer()
 
                     return
-                
-                user = self.bot.get_user(interaction.user.id)
-                mention = user.mention if user else user.name
-                await interaction.respond(
-                        content=mention + " "+ self.REGISTER_MSG_TEXT)
+
+                text = f"""Hej, {self.unregistered_mention(interaction.author)},
+                     \npodaj swój MMR, STEAM_ID w wątku do tej wiadomości"""
+
+                await interaction.author.send(text)
+
+                await interaction.defer()
 
                 return
 
@@ -300,7 +302,9 @@ class Command(BaseCommand):
         command = msg.content.split(' ')[0].lower()
 
         commands = self.get_available_bot_commands()
-        free_for_all = ['!register', '!help', '!reg', '!jak']
+
+        free_for_all = ['!register', '!help', '!reg', '!jak', '!r']
+        
         staff_only = [
             '!vouch', '!add', '!kick', '!mmr', '!ban', '!unban',
             '!set-name', '!set-mmr', '!set-dota-id', '!record-match',
@@ -311,7 +315,6 @@ class Command(BaseCommand):
             '!register', '!vouch', '!wh', '!who', '!whois', '!profile', '!stats', '!top',
             '!streak', '!bottom', '!bot', '!afk-ping', '!afkping', '!role', '!roles', '!recent',
             '!ban', '!unban', '!votekick', '!vk', '!set-name', 'rename' '!set-mmr',
-            'adjust', '!set-dota-id', '!record-match', '!help', '!close', '!reg', '!jak', '!info',
         ]
 
         # if this is a chat channel, check if command is allowed
@@ -328,7 +331,10 @@ class Command(BaseCommand):
         try:
             player = Player.objects.get(discord_id=msg.author.id)
         except Player.DoesNotExist:
-            await msg.channel.send(f'{msg.author.name}, kim jesteś?')
+
+            mention = self.unregistered_mention(msg.author)
+            print(mention)
+            await msg.channel.send(f'{mention}, nie zarejestrowany do używania komend')
             return
 
         if player.banned:
@@ -369,6 +375,22 @@ class Command(BaseCommand):
 
         if not 0 <= mmr < 12000:
             await msg.channel.send('Haha, bardzo śmieszne. :thinking:')
+            #TRY to set visibility to only single user - not working.
+            # Get the @everyone role
+            # everyone_role_id = msg.guild.default_role.id
+            # # Set permissions to only allow the specified user to read the message
+            # overwrite = {
+            #     str(everyone_role_id): {
+            #         'read_messages': False
+            #     },
+            #     str(msg.author.id): {
+            #         'read_messages': True
+            #     }
+            # }
+            #
+            # await sent_message.edit(overwrites=overwrite)
+
+            # await sent.edit(overwrites=overwrite)
             return
 
         await self.register_new_player(msg, name, mmr, dota_id)
@@ -1846,5 +1868,6 @@ class Command(BaseCommand):
             '!reg': self.attach_help_buttons_to_msg,
             '!jak': self.registration_help_command,
             '!info': self.registration_help_command,
+            '!r': self.attach_help_buttons_to_msg
         }
 
