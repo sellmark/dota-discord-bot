@@ -417,12 +417,14 @@ class Command(BaseCommand):
         chat_channel = DiscordChannels.get_solo().chat
         channel = self.bot.get_channel(chat_channel)
         await msg.channel.send(
-            f"""Witamy w Polish Dota2 Inhouse League!, `{name}`! 
-               \nMożesz dołączyć do gry na kanale <#{queue_channel}>"""
+            f"""
+                Witamy w Polish Dota2 Inhouse League!, `{name}`!\n
+                Możesz dołączyć do gry na kanale <#{queue_channel}>
+            """
         )
 
         await channel.send(
-            f"""'Witamy nowego gracza `{name}`'"""
+            f'Witamy nowego gracza, {msg.author.mention} (`{name}`)!'
         )
 
 
