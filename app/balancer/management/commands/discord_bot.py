@@ -131,7 +131,7 @@ class Command(BaseCommand):
             player = Command.get_player_by_name(interaction.user.name)
 
             if not player and type != 'register_form':
-                await interaction.channel.send(f'`{interaction.user.name}`: I don\'t know him')
+                await interaction.channel.send(f'`{interaction.user.name}`: Nieznany, niezarejestrowany gracz')
                 return
 
             if type == 'green':
@@ -178,8 +178,10 @@ class Command(BaseCommand):
 
                     return
 
-                text = f"""Hej, {self.unregistered_mention(interaction.author)},
-                     \npodaj swój MMR, STEAM_ID w wątku do tej wiadomości"""
+                text = f"""
+                        Hej, {self.unregistered_mention(interaction.author)},\n
+                        podaj swój MMR, STEAM_ID jako odpowiedź do tej wiadomości.
+                        """
 
                 await interaction.author.send(text)
 
@@ -332,18 +334,18 @@ class Command(BaseCommand):
         except Player.DoesNotExist:
             mention = self.unregistered_mention(msg.author)
             print(mention)
-            await msg.channel.send(f'{mention}, not registered to use commands')
+            await msg.channel.send(f'{mention}, nie jesteś zarejestrowany.')
             return
 
         if player.banned:
-            await msg.channel.send(f'{msg.author.name}, you are banned.')
+            await msg.channel.send(f'{msg.author.name}, jesteś zbanowany.')
             return
 
         # check permissions when needed
         if not player.bot_access:
             # only staff can use this commands
             if command in staff_only:
-                await msg.channel.send(f'{msg.author.name}, this command is staff-only.')
+                await msg.channel.send(f'{msg.author.name}, ta komenda jest dostępna tylko dla moderacji.')
                 return
 
         # user can use this command
@@ -364,7 +366,7 @@ class Command(BaseCommand):
             dota_id = str(int(params[2]))  # check that id is a number
         except (IndexError, ValueError):
             await msg.channel.send(
-                'Format: `!register username mmr dota_id`. Example: \n' 
+                'Format: `!register twój_pseudonim mmr dota_id`. Example: \n' 
                 '```\n'
                 '!register Uvs 3000 444510529\n'
                 '```'
@@ -372,7 +374,7 @@ class Command(BaseCommand):
             return
 
         if not 0 <= mmr < 10000:
-            sent_message = await msg.channel.send('Haha, very funny. :thinking:')
+            sent_message = await msg.channel.send('Haha, bardzo śmieszne :thinking:')
 
             #TRY to set visibility to only single user - not working.
             # Get the @everyone role
@@ -442,7 +444,7 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(f'`{name}`: I don\'t know him')
+            await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
             return
 
         await self.player_vouched(player)
@@ -466,7 +468,7 @@ class Command(BaseCommand):
 
         player = player or Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(f'`{name}`: I don\'t know him')
+            await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
             return
 
         dotabuff = f'https://www.dotabuff.com/players/{player.dota_id}'
@@ -489,11 +491,11 @@ class Command(BaseCommand):
             f'Dotabuff: {dotabuff}\n'
             f'Ladder: {player_url}\n\n'
             f'Ladder MMR: {player.ladder_mmr}\n'
-            f'Score: {player.score}\n'
-            f'Rank: {player.rank_score}\n'
-            f'Games: {len(player.matches)} ({wins}-{losses})\n\n'
-            f'Vouched: {"yes" if player.vouched else "no"}\n'
-            f'Roles: {Command.roles_str(player.roles)}\n\n'
+            f'Wynik: {player.score}\n'
+            f'Ranga: {player.rank_score}\n'
+            f'Gry: {len(player.matches)} ({wins}-{losses})\n\n'
+            f'W lidze?: {"tak" if player.vouched else "nie"}\n'
+            f'Role: {Command.roles_str(player.roles)}\n\n'
             f'{player.description or ""}\n'
             f'```'
         )
@@ -510,7 +512,7 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(f'`{name}`: I don\'t know him')
+            await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
             return
 
         player.banned = Player.BAN_PLAYING
@@ -518,7 +520,7 @@ class Command(BaseCommand):
 
         await msg.channel.send(
             f'```\n'
-            f'{player.name} has been banned.\n'
+            f'{player.name} został zbanowany.\n'
             f'```'
         )
 
@@ -534,7 +536,7 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(f'`{name}`: I don\'t know him')
+            await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
             return
 
         player.banned = None
@@ -542,7 +544,7 @@ class Command(BaseCommand):
 
         await msg.channel.send(
             f'```\n'
-            f'{player.name} has been unbanned.\n'
+            f'{player.name} został odbanowany.\n'
             f'```'
         )
 
@@ -600,7 +602,7 @@ class Command(BaseCommand):
                 ''.join(Command.queue_str(q) for q in queues)
             )
         else:
-            await msg.channel.send('Noone is currently queueing.')
+            await msg.channel.send('W tym momencie nikt nie jest w kolecje.')
 
         await self.queues_show()
 
@@ -615,21 +617,21 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(f'`{name}`: I don\'t know him')
+            await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
             return
 
         # check that player is not in a queue already
         if player.ladderqueue_set.filter(active=True):
-            await msg.channel.send(f'`{player}` is already in a queue')
+            await msg.channel.send(f'`{player}` jest już w kolejce.')
             return
 
         channel = QueueChannel.objects.get(discord_id=msg.channel.id)
         queue = Command.add_player_to_queue(player, channel)
 
         await msg.channel.send(
-            f'By a shameless abuse of power `{msg.author.name}` '
-            f'forcefully added {self.player_mention(player)} to the inhouse queue. '
-            f'Have fun! ;)'
+            f'Przez bezwstydne nadużywanie mocy admina `{msg.author.name}` '
+            f'dodaje {self.player_mention(player)} do kolejki inhousowej. '
+            f'Miłej zabawy! ;)'
         )
 
         # TODO: this is a separate function
@@ -642,9 +644,9 @@ class Command(BaseCommand):
                               Command.balance_str(queue.balance)
 
             await msg.channel.send(
-                f'\nQueue is full! {balance_str} \n' +
+                f'\nKolejka jest pełna! {balance_str} \n' +
                 f' '.join(self.player_mention(p) for p in queue.players.all()) +
-                f'\nYou have 5 min to join the lobby.'
+                f'\nMasz 5 minut, żeby dołączyć do poczekalni.'
             )
 
         await self.queues_show()
@@ -660,7 +662,7 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(f'`{name}`: I don\'t know him')
+            await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
             return
 
         deleted, _ = QueuePlayer.objects \
@@ -670,9 +672,9 @@ class Command(BaseCommand):
         if deleted > 0:
             player_discord = self.bot.get_user(int(player.discord_id))
             mention = player_discord.mention if player_discord else player.name
-            await msg.channel.send(f'{mention} was kicked from the queue.')
+            await msg.channel.send(f'{mention} został wyrzucony z kolejki')
         else:
-            await msg.channel.send(f'`{player}` is not queuing.\n')
+            await msg.channel.send(f'`{player}` nie jest w kolejce.\n')
 
         await self.queues_show()
 
@@ -688,16 +690,16 @@ class Command(BaseCommand):
 
         queue = player.ladderqueue_set.filter(active=True).first()
         if not queue or queue.players.count() < 10:
-            await msg.channel.send(f'`{player}`, you are not in a full queue.')
+            await msg.channel.send(f'`{player}`, Twoja kolejka nie jest pełna.')
             return
 
         victim = Command.get_player_by_name(name)
         if not victim:
-            await msg.channel.send(f'`{name}`: I don\'t know him')
+            await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
             return
 
         if victim not in queue.players.all():
-            await msg.channel.send(f'`{victim}` is not in your queue {player}.')
+            await msg.channel.send(f'`{victim}` nie jest w Twojej kolejce {player}.')
             return
 
         votes_needed = LadderSettings.get_solo().votekick_treshold
@@ -722,7 +724,7 @@ class Command(BaseCommand):
 
             victim_discord = self.bot.get_user(int(victim.discord_id))
             mention = victim_discord.mention if victim_discord else victim.name
-            await msg.channel.send(f'{mention} was kicked from the queue.')
+            await msg.channel.send(f'{mention} został wyrzucony z kolejki.')
 
             await self.queues_show()
 
@@ -740,13 +742,13 @@ class Command(BaseCommand):
 
         if LadderQueue.objects.filter(channel=channel, active=True).exists():
             await msg.channel.send(
-                f'Cannot change MMR when there are active queue in the channel')
+                f'Nie można zmienić MMR, kiedy jest aktywna kolejka na kanale.')
             return
 
         channel.min_mmr = min_mmr
         channel.save()
 
-        await msg.channel.send(f'Min MMR set to {min_mmr}')
+        await msg.channel.send(f'Minimalne MMR ustawione jako: {min_mmr}')
 
     async def top_command(self, msg, **kwargs):
         def get_top_players(limit, bottom=False):
@@ -799,11 +801,11 @@ class Command(BaseCommand):
         url = f'{host}{reverse("ladder:player-list-score")}'
 
         if limit < 1:
-            await msg.channel.send('Haha, very funny :thinking:')
+            await msg.channel.send('Haha, bardzo śmieszne :thinking:')
             return
 
         if limit > 15:
-            await msg.channel.send(f'Just open the leaderboard: {url}')
+            await msg.channel.send(f'Sprawdź na tabeli wyników: {url}')
             return
 
         # all is ok, can show top players
@@ -813,7 +815,7 @@ class Command(BaseCommand):
         )
         await msg.channel.send(
             f'```{top_str} ``` \n'
-            f'Full leaderboard is here: {url}'
+            f'Pełna tabela jest dostępna tutaj: {url}'
         )
 
     async def bottom_command(self, msg, **kwargs):
@@ -836,7 +838,7 @@ class Command(BaseCommand):
 
         player = player or Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(f'`{name}`: I don\'t know him')
+            await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
             return
 
         mps = player.matchplayer_set.filter(match__season=LadderSettings.get_solo().current_season)
@@ -845,7 +847,7 @@ class Command(BaseCommand):
         streaks = [list(g) for k, g in itertools.groupby(results)]
 
         if not streaks:
-            await msg.channel.send(f'`{player.name}`: You didn\'t play a thing to have streak.')
+            await msg.channel.send(f'`{player.name}`: Musisz zagrać grę, żeby mieć serję zwycięst/porażek.')
             return
 
         streak = streaks[0]
@@ -853,9 +855,9 @@ class Command(BaseCommand):
 
         await msg.channel.send(
             f'```\n'
-            f'{player} streaks\n\n'
-            f'Current: {len(streak)}{"W" if streak[0] == "win" else "L"}\n'
-            f'Biggest: {len(max_streak)}{"W" if max_streak[0] == "win" else "L"}\n'
+            f'{player} Serie\n\n'
+            f'Seria na ten moment: {len(streak)}{"W" if streak[0] == "wygranych" else "przegranych"}\n'
+            f'Największa seria: {len(max_streak)}{"W" if max_streak[0] == "wygranych" else "przegranych"}\n'
             f'```'
         )
 
@@ -875,11 +877,11 @@ class Command(BaseCommand):
             await msg.channel.send('Aye aye, captain')
         else:
             await msg.channel.send(
-                f'`{player.name}`, you current mode is `{"ON" if player.queue_afk_ping else "OFF"}`. '
-                f'Available modes: \n'
+                f'`{player.name}`, na ten moment to ustawienie jest `{"WŁĄCZONE" if player.queue_afk_ping else "WYŁĄCZONE"}`. '
+                f'Dostępne tryby: \n'
                 f'```\n'
-                f'!afk-ping ON   - will ping you before kicking for afk.\n'
-                f'!afk-ping OFF  - will kick you for afk without pinging.\n'
+                f'!afk-ping ON   - zostaniesz zpingowany, zanim zostaniesz wyrzucony za bycie AFK.\n'
+                f'!afk-ping OFF  - zostaniesz po prostu wyrzucony za bycie AFK.\n'
                 f'```'
             )
 
@@ -898,7 +900,7 @@ class Command(BaseCommand):
                 if any(not 0 < x < 6 for x in args):
                     raise ValueError
             except ValueError:
-                await msg.channel.send('Haha, very funny :thinking:')
+                await msg.channel.send('Haha, bardzo śmieszne :thinking:')
                 return
 
             # args are fine
@@ -937,7 +939,7 @@ class Command(BaseCommand):
         elif len(args) == 0:
             # !role command without args, show current role prefs
             await msg.channel.send(
-                f'Current role prefs for `{player.name}`: \n'
+                f'Preferencje ról dla gracza: `{player.name}`: \n'
                 f'```\n{Command.roles_str(roles)}\n```'
             )
             return
@@ -945,25 +947,25 @@ class Command(BaseCommand):
             # wrong format, so just show help message
             await msg.channel.send(
                 'This command sets your comfort score for a given role, from 1 to 5. '
-                'Usage examples: \n'
+                'Przykład: \n'
                 '```\n'
-                '!role mid 5  - you prefer to play mid very much;\n'
-                '!role pos5 2  - you don\'t really want to play hard support;\n'
-                '!role supp 1  - you totally don\'t want to play any support (pos4 or pos5);\n\n'
-                '!role 1 4 2 5 3  - set all roles in one command; this means carry=1, mid=4, off=3, pos4=5, pos5=2;\n'
+                '!role mid 5  - uwielbiasz grać mida;\n'
+                '!role pos5 2  - nie dokońca chcesz grać ścisłe wsparcie;\n'
+                '!role supp 1  - z pewnością nie chcesz grać żadnych ról wsparcia (4 i 5);\n\n'
+                '!role 1 4 2 5 3  - ustaw wszystkie role z jednym zamachem; oznacza to carry=1, mid=4, off=3, pos4=5, pos5=2;\n'
                 '\n```\n'
-                'Role names: \n'
+                'Nazwy ról: \n'
                 '```\n'
                 'carry/pos1, mid/midlane/pos2, off/offlane/pos3, pos4, pos5\n'
-                'core  - combines carry, mid and off\n'
-                'sup/supp/support  - combines pos4 and pos5\n'
+                'core  - zawiera carry, mid i off\n'
+                'sup/supp/support  - zawiera pos4 i pos5\n'
                 '\n```'
             )
             return
 
         roles.save()
         await msg.channel.send(
-            f'New role prefs for `{player.name}`: \n'
+            f'Nowe preferencje ról dla `{player.name}`: \n'
             f'```\n{Command.roles_str(roles)}\n```'
         )
 
@@ -994,7 +996,7 @@ class Command(BaseCommand):
         if name:
             player = Command.get_player_by_name(name)
             if not player:
-                await msg.channel.send(f'`{name}`: I don\'t know him')
+                await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
                 return
 
         host = os.environ.get('BASE_URL', 'localhost:8000')
@@ -1077,7 +1079,7 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(mention)
         if not player:
-            await msg.channel.send(f'I don\'t know him')
+            await msg.channel.send(f'Nieznany, niezarejestrowany gracz')
             return
 
         player.name = new_name
@@ -1100,7 +1102,7 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(f'`{name}`: I don\'t know him')
+            await msg.channel.send(f'`{name}`: Nieznany, niezarejestrowany gracz')
             return
 
         ScoreChange.objects.create(
@@ -1127,7 +1129,7 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(f'I don\'t know him')
+            await msg.channel.send(f'Nieznany, niezarejestrowany gracz')
             return
 
         player.dota_id = dota_id
