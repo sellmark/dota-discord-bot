@@ -593,7 +593,16 @@ class Command(BaseCommand):
             f'Have fun! ;)'
         )
 
-        # TODO: this is a separate function
+        await self.try_confirm_queue(queue, msg)
+
+        await self.queues_show()
+
+
+    async def try_confirm_queue(queue, msg):
+        if queue.players.count() == 10:
+            await msg.channel.send(f"\nQueue is starting in 10 seconds!")
+            await asyncio.sleep(10)
+
         if queue.players.count() == 10:
             Command.balance_queue(queue)
 
@@ -607,8 +616,6 @@ class Command(BaseCommand):
                 f' '.join(self.player_mention(p) for p in queue.players.all()) +
                 f'\nYou have 5 min to join the lobby.'
             )
-
-        await self.queues_show()
 
     async def kick_from_queue_command(self, msg, **kwargs):
         command = msg.content
