@@ -205,7 +205,7 @@ class Command(BaseCommand):
 
                     return
 
-                text = TRANSLATIONS[LANG]["register_form"].format({self.unregistered_mention(interaction.author)})
+                text = TRANSLATIONS[LANG]["register_form"].format(self.unregistered_mention(interaction.author))
 
                 await interaction.author.send(text)
 
