@@ -16,7 +16,7 @@
   "welcome": "### Witamy {} na Polskiej Lidze Dota2 <:A1polish:1048621907999735848>! Od teraz możesz dołączać do gry na {}",
   "welcome_player": "Witamy nowego gracza {}",
   "vouched": "{} został potwierdzony. Możesz dołączyć do rozgrywki!",
-  "whois_stats": "\n{}\nMMR: {}\nDotabuff: {}\nLadder: {}\n\nLadder MMR: {}\nScore: {}\nRank: {}\nGames: {} ({})\n\nVouched: {}\nRoles {}\n\n{}\n",
+  "whois_stats": "\n{}\nMMR: {}\nDotabuff: {}\nLadder: {}\n\nLadder MMR: {}\nScore: {}\nRank: {}\nGames: {} ({}W-{}P)\n\nVouched: {}\nRoles {}\n\n{}\n",
   "ban_message": "{} został zbanowany. Żegnaj",
   "unban_message": "{} został odbanowany. Witamy ponownie!",
   "no_queue": "Kolejka jest obecnie pusta",
