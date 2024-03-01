@@ -16,7 +16,7 @@
   "welcome": "Welcome to Polish Dota2 Inhouse League, {}!\nYou can join the game at {}",
   "welcome_player": "Welcome new player `{}`",
   "vouched": "{} has been vouched. They can play now!",
-  "whois_stats": "```\n{}\nMMR: {}\nDotabuff: {}\nLadder: {}\n\nLadder MMR: {}\nScore: {}\nRank: {}\nGames: {} ({})\n\nVouched: {}\nRoles {}\n\n{}\n```",
+  "whois_stats": "```\n{}\nMMR: {}\nDotabuff: {}\nLadder: {}\n\nLadder MMR: {}\nScore: {}\nRank: {}\nGames: {} ({}W-{}L)\n\nVouched: {}\nRoles {}\n\n{}\n```",
   "ban_message": "{} has been banned.",
   "unban_message": "{} has been unbanned.",
   "no_queue": "No one is currently queueing",
