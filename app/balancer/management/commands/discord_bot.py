@@ -26,19 +26,7 @@ from app.ladder.models import Player, LadderSettings, LadderQueue, QueuePlayer, 
     RolesPreference, DiscordChannels, DiscordPoll, ScoreChange
 
 from app.balancer.management.commands.discord.poll_commands import PollService
-
-import json
-#importing translations
-#ideally this should be in a separate file/folder for translations, but since file structure in this project doesn't exist... :)
-TRANSLATIONS = {}
-LANG = "PL"
-with open(os.path.join(os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__))), "EN.json"), encoding='utf-8') as english_file:
-    english = json.load(english_file)
-    TRANSLATIONS["EN"] = english
-
-with open(os.path.join(os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__))), "PL.json"), encoding='utf-8') as polish_file:
-    polish = json.load(polish_file)
-    TRANSLATIONS["PL"] = polish
+from app.balancer.management.commands.command_translation.translations import TRANSLATIONS, LANG
 
 def is_player_registered(msg, dota_id, name):
     # check if we can register this player
@@ -458,7 +446,20 @@ class Command(BaseCommand):
         wins = sum(1 if m.match.winner == m.team else 0 for m in player.matches)
         losses = len(player.matches) - wins
 
-        await msg.channel.send(TRANSLATIONS[LANG]["whois_stats"].format(player.name, player.dota_mmr, dotabuff, player_url, player.ladder_mmr, player.score, player.rank_score, len(player.matches), wins, losses, "yes" if player.vouched else "no", Command.roles_str(player.roles), player.description or ""))
+        await msg.channel.send(TRANSLATIONS[LANG]["whois_stats"].format(
+            player.name,
+            player.dota_mmr,
+            dotabuff, player_url,
+            player.ladder_mmr,
+            player.score,
+            player.rank_score,
+            #<Amount of matches> (<wins>-<losses>)
+            len(player.matches), wins, losses,
+            "yes" if player.vouched else "no",
+            Command.roles_str(player.roles),
+            player.description or ""
+            )
+        )
 
     async def ban_command(self, msg, **kwargs):
         command = msg.content
@@ -781,7 +782,7 @@ class Command(BaseCommand):
         streaks = [list(g) for k, g in itertools.groupby(results)]
 
         if not streaks:
-            await msg.channel.send(TRANSLATIONS[LANG]["no_streak"].format(player.name))
+            await msg.channel.send(TRANSLATIONS[LANG]["no_streak"].format(self.player_mention(player)))
             return
 
         streak = streaks[0]
@@ -954,7 +955,6 @@ class Command(BaseCommand):
     async def set_name_command(self, msg, **kwargs):
         command = msg.content
         admin = kwargs['player']
-        #TODO HEREEEEEEEEEEE
         print(f'\n!set-name command from {admin}:\n{command}')
 
         try:
