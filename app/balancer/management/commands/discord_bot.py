@@ -26,7 +26,7 @@ from app.ladder.models import Player, LadderSettings, LadderQueue, QueuePlayer, 
     RolesPreference, DiscordChannels, DiscordPoll, ScoreChange
 
 from app.balancer.management.commands.discord.poll_commands import PollService
-from app.balancer.management.commands.command_translation.translations import TRANSLATIONS, LANG
+from app.balancer.command_translation.translations import TRANSLATIONS, LANG
 
 def is_player_registered(msg, dota_id, name):
     # check if we can register this player
