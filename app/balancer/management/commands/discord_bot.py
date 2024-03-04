@@ -1262,7 +1262,15 @@ class Command(BaseCommand):
 
         suffix = LadderSettings.get_solo().noob_queue_suffix
 
-        return TRANSLATIONS[LANG]["queue_str"].format(q.id, f'Min MMR: {q.min_mmr}\n' if show_min_mmr else '\n', q.players.count(), f' | '.join(f'{p.name}-{p.ladder_mmr}' for p in players), avg_mmr, suffix if avg_mmr < 4000 else "")
+        return TRANSLATIONS[LANG]["queue_str"].format(
+            q.id,
+            game_str,
+            f'Min MMR: {q.min_mmr}\n' if show_min_mmr else '\n',
+            q.players.count(),
+            f' | '.join(f'{p.name}-{p.ladder_mmr}' for p in players),
+            avg_mmr,
+            suffix if avg_mmr < 4000 else ""
+        )
 
     @staticmethod
     def roles_str(roles: RolesPreference):
