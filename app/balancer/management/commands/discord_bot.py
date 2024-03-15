@@ -488,7 +488,7 @@ class Command(BaseCommand):
         player_name = parts[1]
 
         try:
-            player = Player.objects.get(name=player_name)
+            player = Command.get_player_by_name(player_name)
         except Player.DoesNotExist:
             await msg.channel.send(f"Player '{player_name}' not found.")
             return
@@ -514,7 +514,7 @@ class Command(BaseCommand):
         player_name = parts[1]
 
         try:
-            player = Player.objects.get(name=player_name)
+            player = Command.get_player_by_name(player_name)
         except Player.DoesNotExist:
             await msg.channel.send(f"Player '{player_name}' not found.")
             return
