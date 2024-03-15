@@ -2,7 +2,7 @@ REPORT_SUCCESS_MESSAGE = "{} has reported {} for {} in match: {} with this comme
 TIP_SUCCESS_MESSAGE = "{} has tipped {} for {} in match: {} with this comment: \n{}"
 PLAYER_NOT_FOUND_MESSAGE = "Could not find one or both players."
 CANNOT_REPORT_SELF = "Cannot report/tip yourself."
-SIGNED_PLAYERS = "⌛│Poczekalnia: {}"
+SIGNED_PLAYERS = "⌛│Kolejka {}"
 
 INVALID_FORMAT_MESSAGE = ("Invalid command format. Please specify:\n"
                           "Player Reason Match ID(skip if reporting last game) and a Comment(max 255 chars) \n"
@@ -223,7 +223,7 @@ class Command(BaseCommand):
 
         @tasks.loop(seconds=302)
         async def update_voice_channel():
-            await self.voice_channel.edit(name=SIGNED_PLAYERS.format(f"{len(self.queued_players)} / 10"))
+            await self.voice_channel.edit(name=SIGNED_PLAYERS.format(f"{len(self.queued_players)}/10"))
 
         @tasks.loop(minutes=5)
         async def queue_afk_check():
