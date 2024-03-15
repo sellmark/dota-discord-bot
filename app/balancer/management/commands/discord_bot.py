@@ -2,7 +2,7 @@ REPORT_SUCCESS_MESSAGE = "{} has reported {} for {} in match: {} with this comme
 TIP_SUCCESS_MESSAGE = "{} has tipped {} for {} in match: {} with this comment: \n{}"
 PLAYER_NOT_FOUND_MESSAGE = "Could not find one or both players."
 CANNOT_REPORT_SELF = "Cannot report/tip yourself."
-SIGNED_PLAYERS = "Signed: {}"
+SIGNED_PLAYERS = "⌛│Poczekalnia: {}"
 
 INVALID_FORMAT_MESSAGE = ("Invalid command format. Please specify:\n"
                           "Player Reason Match ID(skip if reporting last game) and a Comment(max 255 chars) \n"
@@ -480,6 +480,7 @@ class Command(BaseCommand):
 
     async def handle_show_tips_command(self, msg, **kwargs):
         # Extract the player name from the message
+        player = kwargs['player']
         parts = msg.content.split(maxsplit=1)
         if len(parts) < 2:
             await msg.channel.send("Please specify a player name.")
