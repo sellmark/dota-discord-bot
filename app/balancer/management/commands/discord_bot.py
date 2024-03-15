@@ -298,13 +298,13 @@ class Command(BaseCommand):
         staff_only = [
             '!vouch', '!add', '!kick', '!mmr', '!ban', '!unban',
             '!set-name', '!set-mmr', '!set-dota-id', '!record-match', '!record-queue'
-            '!close',
+            '!close', '!adminhelp',
         ]
         # TODO: do something with this, getting too big. Replace with disabled_in_chat list?
         chat_channel = [
             '!register', '!vouch', '!wh', '!who', '!whois', '!profile', '!stats', '!top',
             '!streak', '!bottom', '!bot', '!afk-ping', '!afkping', '!role', '!roles', '!recent',
-            '!ban', '!unban', '!votekick', '!vk', '!set-name', '!set-mmr',
+            '!ban', '!unban', '!votekick', '!vk', '!set-name', '!set-mmr', '!adminhelp',
             '!adjust', '!set-dota-id', '!record-match', '!record-queue', '!help', '!close',
             '!reg', '!r', '!rename', '!jak', '!info', '!list', '!q', 'rename', '!my-dota-id',
             '!report', '!tip', '!reports', '!tips',
@@ -1069,6 +1069,22 @@ class Command(BaseCommand):
             f'\n```\n'
         )
 
+    async def admin_help_command(self, msg, **kwargs):
+        commands_dict = self.get_admin_help_commands()
+        master_text = ''
+
+        for group, texts in commands_dict.items():
+            master_text += f'\n\n{group}\n'
+            for key, text in texts.items():
+                master_text += key + ": " + text + "\n"
+
+        await msg.channel.send(
+            f'```\n' +
+            f'Lista komend Admina:\n' +
+            master_text +
+            f'\n```\n'
+        )
+
     async def registration_help_command(self, msg, **kwargs):
         print('!jak command')
         queue_channel = DiscordChannels.get_solo().queues
@@ -1820,29 +1836,34 @@ class Command(BaseCommand):
                 '!tip': 'Same as !report, but in positive way',
                 '!reports': 'Show Reports log of a Player',
                 '!tips': 'Show Tips log of a Player'
+            }
+        }
+
+    def get_admin_help_commands(self):
+        return  {
+            'Queue': {
+                '!join/!q+': 'Join queue',
+                '!leave/!q-': 'Leave queue',
+                '!list/!q': 'List of queues',
+                '!vk/!votekick': 'Vote kick player',
+                '!afk-ping/!afkping': 'Ping AFK players',
             },
-            # 'Queue': {
-            #     '!join/!q+': 'Join queue',
-            #     '!leave/!q-': 'Leave queue',
-            #     '!list/!q': 'List of queues',
-            #     '!vk/!votekick': 'Vote kick player',
-            #     '!afk-ping/!afkping': 'Ping AFK players',
-            # },
-            # 'Admin': {
-            #     '!vouch': 'Used to accept players to league(currently off)',
-            #     '!ban': 'Ban player',
-            #     '!unban': 'Unban player',
-            #     '!set-mmr/!adjust': 'Set MMR of a player',
-            #     '!set-dota-id': 'Set STEAM ID of a player'
-            # },
-            # 'AdminQueue': {
-            #     '!add': 'Add player manually to queue',
-            #     '!kick': 'Kick player from queue',
-            #     '!close': 'Close opened queue',
-            #     '!record-match': 'Record a win using [dire/radiant] [@10 mentions]',
-            #     '!mmr': 'Set MMR for a queue',
-            #     '!set-name/!rename': 'Rename player(careful)',
-            # },
+            'Admin': {
+                '!vouch': 'Used to accept players to league(currently off)',
+                '!ban': 'Ban player',
+                '!unban': 'Unban player',
+                '!set-mmr/!adjust': 'Set MMR of a player',
+                '!set-dota-id': 'Set STEAM ID of a player'
+            },
+            'AdminQueue': {
+                '!add': 'Add player manually to queue',
+                '!kick': 'Kick player from queue',
+                '!close': 'Close opened queue',
+                '!record-match': '!record [dire/radiant] [@10 mentions] - Record a win for players from outside the a queue(manual played match)',
+                '!record-queue': '!record [dire/radiant] 17 - Record a win using Queue Number',
+                '!mmr': 'Set MMR for a queue',
+                '!set-name/!rename': 'Rename player(careful)',
+            }
         }
 
     def get_available_bot_commands(self):
@@ -1885,6 +1906,7 @@ class Command(BaseCommand):
             '!record-match': self.record_match_command,
             '!record-queue': self.record_match_from_queue,
             '!help': self.help_command,
+            '!adminhelp': self.admin_help_command,
             '!close': self.close_queue_command,
             '!reg': self.attach_help_buttons_to_msg,
             '!r': self.attach_help_buttons_to_msg,
