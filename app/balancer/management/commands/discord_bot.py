@@ -221,7 +221,7 @@ class Command(BaseCommand):
             if type in ["green", "red"]:
                 await self.queues_show()
 
-        @tasks.loop(minutes=15)
+        @tasks.loop(seconds=302)
         async def update_voice_channel():
             await self.voice_channel.edit(name=SIGNED_PLAYERS.format(f"{len(self.queued_players)} / 10"))
 
@@ -1064,7 +1064,7 @@ class Command(BaseCommand):
 
         await msg.channel.send(
             f'```\n' +
-            f'Lista komend:\n\n' +
+            f'Lista komend:\n' +
             master_text +
             f'\n```\n'
         )
@@ -1073,13 +1073,11 @@ class Command(BaseCommand):
         print('!jak command')
         queue_channel = DiscordChannels.get_solo().queues
         await msg.channel.send(
-            f'```\n'
-            f'Rejestracja - KROK po KROKU\n\n'
+            f'**Rejestracja - KROK po KROKU**\n'
             f'1. Wpisz **!reg** na tym kanale.\n'
-            f'2. Otrzymasz PRIV od bota, odpowiedz na jego wiadomość("↩️ Odpowiedz") i podaj: **MMR, FRIEND_ID**, na przykład:\n\n'
-            f'2137 , 56080147\n(ważny jest przecinek)\n\n' 
+            f'2. Otrzymasz PRIV od bota, odpowiedz na jego wiadomość("↩️ Odpowiedz") i podaj: **MMR, FRIEND_ID**, na przykład:\n'
+            f'`2137 , 56080147\n`' 
             f'3. Czekaj na !vouch przez ADMINA(jeżeli nie nastąpił automatycznie).\n'
-            f'```\n'
             f'4. Ciesz się wspaniałą rozgrywką na: <#{queue_channel}> \n'
         )
 
@@ -1806,40 +1804,45 @@ class Command(BaseCommand):
 
     def get_help_commands(self):
         return {
-            'Basic': {
+            'Komendy:': {
                 '!help': 'This command',
-                '!jak/!info': 'How to REGISTER: STEP-BY-STEP',
-                '!r/!reg': 'Used to register a new Player',
+                '!info': 'How to REGISTER: STEP-BY-STEP',
+                '!reg': 'Used to register a new Player',
                 '!register': 'Text mode of registration',
                 '!wh/!who/!whois/!profile/!stats': 'Shows statistics about the player',
                 '!top': 'Top players',
-                '!bot/!bottom': 'Bottom players',
+                '!bot': 'Bottom players',
                 '!streak': 'Your streak current & ath',
-                '!role/!roles': 'Set your role preferences',
+                '!roles': 'Set your role preferences',
                 '!recent': 'Show recent matches',
+                '!rename': 'Rename yourself in the League',
+                '!report': '!report @Gracz reason [MatchID] [Comment] - if you ommit MatchId, last game will be taken',
+                '!tip': 'Same as !report, but in positive way',
+                '!reports': 'Show Reports log of a Player',
+                '!tips': 'Show Tips log of a Player'
             },
-            'Queue': {
-                '!join/!q+': 'Join queue',
-                '!leave/!q-': 'Leave queue',
-                '!list/!q': 'List of queues',
-                '!vk/!votekick': 'Vote kick player',
-                '!afk-ping/!afkping': 'Ping AFK players',
-            },
-            'Admin': {
-                '!vouch': 'Used to accept players to league(currently off)',
-                '!ban': 'Ban player',
-                '!unban': 'Unban player',
-                '!set-mmr/!adjust': 'Set MMR of a player',
-                '!set-dota-id': 'Set STEAM ID of a player'
-            },
-            'AdminQueue': {
-                '!add': 'Add player manually to queue',
-                '!kick': 'Kick player from queue',
-                '!close': 'Close opened queue',
-                '!record-match': 'Record a win using [dire/radiant] [@10 mentions]',
-                '!mmr': 'Set MMR for a queue',
-                '!set-name/!rename': 'Rename player(careful)',
-            },
+            # 'Queue': {
+            #     '!join/!q+': 'Join queue',
+            #     '!leave/!q-': 'Leave queue',
+            #     '!list/!q': 'List of queues',
+            #     '!vk/!votekick': 'Vote kick player',
+            #     '!afk-ping/!afkping': 'Ping AFK players',
+            # },
+            # 'Admin': {
+            #     '!vouch': 'Used to accept players to league(currently off)',
+            #     '!ban': 'Ban player',
+            #     '!unban': 'Unban player',
+            #     '!set-mmr/!adjust': 'Set MMR of a player',
+            #     '!set-dota-id': 'Set STEAM ID of a player'
+            # },
+            # 'AdminQueue': {
+            #     '!add': 'Add player manually to queue',
+            #     '!kick': 'Kick player from queue',
+            #     '!close': 'Close opened queue',
+            #     '!record-match': 'Record a win using [dire/radiant] [@10 mentions]',
+            #     '!mmr': 'Set MMR for a queue',
+            #     '!set-name/!rename': 'Rename player(careful)',
+            # },
         }
 
     def get_available_bot_commands(self):
