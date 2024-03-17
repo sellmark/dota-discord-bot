@@ -193,7 +193,7 @@ class Command(BaseCommand):
 
                     return
 
-                text = TRANSLATIONS[LANG]["register_form"].format(self.unregistered_mention(interaction.author))
+                text = TRANSLATIONS[LANG]["register_form"].format({self.unregistered_mention(interaction.author)})
 
                 await interaction.author.send(text)
 
@@ -289,7 +289,7 @@ class Command(BaseCommand):
         # TODO: do something with this, getting too big. Replace with disabled_in_chat list?
         chat_channel = [
             '!register', '!vouch', '!wh', '!who', '!whois', '!profile', '!stats', '!top',
-            '!streak', '!bottom', '!bot', '!afk-ping', '!afkping', '!role', '!roles', '!recent',
+            '!bottom', '!bot', '!afk-ping', '!afkping', '!role', '!roles', '!recent',
             '!ban', '!unban', '!votekick', '!vk', '!set-name', 'rename' '!set-mmr', '!jak', '!info',
             'adjust', '!set-dota-id', '!record-match', '!help', '!close', '!reg', '!r', '!rename', '!list', '!q'
         ]
@@ -391,8 +391,6 @@ class Command(BaseCommand):
         channel = self.bot.get_channel(chat_channel)
         await msg.channel.send(TRANSLATIONS[LANG]["welcome"].format(name, queue_channel))
 
-        await channel.send(TRANSLATIONS[LANG]["welcome_player"].format(name))
-
 
 
     async def vouch_command(self, msg, **kwargs):
@@ -446,21 +444,41 @@ class Command(BaseCommand):
         wins = sum(1 if m.match.winner == m.team else 0 for m in player.matches)
         losses = len(player.matches) - wins
 
+        mps = player.matchplayer_set.filter(match__season=LadderSettings.get_solo().current_season)
+        results = ['win' if x.team == x.match.winner else 'loss' for x in mps]
+        streaks = [list(g) for k, g in itertools.groupby(results)]
+        streak = {}
+        max_streak = {}
+        losing_streak = 0
+        winning_streak = 0
+        if len(streaks): 
+            streak = streaks[0]
+            max_streak = max(streaks, key=len)
+            for s in streaks: 
+                if len(s) > winning_streak and s[0] == "win":
+                    winning_streak = len(s)
+                if len(s) > losing_streak and s[0] == "loss":
+                    winning_streak = len(s)
+
         await msg.channel.send(TRANSLATIONS[LANG]["whois_stats"].format(
             player.name,
-            player.dota_mmr,
-            dotabuff, player_url,
-            player.ladder_mmr,
-            player.score,
             player.rank_score,
-            #<Amount of matches> (<wins>-<losses>)
-            len(player.matches), wins, losses,
-            "yes" if player.vouched else "no",
-            Command.roles_str(player.roles),
-            player.description or ""
+            player.ladder_mmr,
+            player.dota_mmr,
+            len(player.matches),
+            round(wins/(wins+losses)*100) if wins+losses != 0  else 0,
+            f'{"+" if streak and streak[0] == "win" else "-"}{len(streak)}',
+            winning_streak,
+            losing_streak,
+            player.roles.carry,
+            player.roles.mid,
+            player.roles.offlane,
+            player.roles.pos4,
+            player.roles.pos5,
+            player_url,
+            dotabuff,
             )
         )
-
     async def ban_command(self, msg, **kwargs):
         command = msg.content
         player = kwargs['player']
@@ -501,24 +519,13 @@ class Command(BaseCommand):
 
         await msg.channel.send(TRANSLATIONS[LANG]["unban_message"].format(player.name))
 
-    async def join_queue_command(self, msg, **kwargs):
-        command = msg.content
-        player = kwargs['player']
-        print(f'Join command from {player}:\n {command}')
-
-        channel = QueueChannel.objects.get(discord_id=msg.channel.id)
-        _, _, response = await self.player_join_queue(player, channel)
-
-        await msg.channel.send(response)
-        await self.queues_show()
-
     async def attach_join_buttons_to_queue_msg(self, msg, **kwargs):
         await self.attach_buttons_to_msg(msg, [
             [
-                Button(label="In",
+                Button(label="Dołącz",
                        custom_id="green-" + str(msg.id),
                        style=ButtonStyle.green),
-                Button(label="Out",
+                Button(label="Opuść",
                        custom_id="red-" + str(msg.id),
                        style=ButtonStyle.red),
             ]
@@ -538,26 +545,6 @@ class Command(BaseCommand):
         await msg.author.send(components=[
         [Button(label="!register", custom_id="register_form-"+str(msg.channel.id), style=ButtonStyle.blurple)]
     ])
-
-
-    async def leave_queue_command(self, msg, **kwargs):
-        command = msg.content
-        player = kwargs['player']
-        print(f'Leave command from {player}:\n {command}')
-
-        await self.player_leave_queue(player, msg)
-        await self.queues_show()
-
-    async def show_queues_command(self, msg, **kwargs):
-        queues = LadderQueue.objects.filter(active=True)
-        if queues:
-            await msg.channel.send(
-                ''.join(Command.queue_str(q) for q in queues)
-            )
-        else:
-            await msg.channel.send(TRANSLATIONS[LANG]["no_queue"])
-
-        await self.queues_show()
 
     async def add_to_queue_command(self, msg, **kwargs):
         command = msg.content
@@ -652,7 +639,7 @@ class Command(BaseCommand):
         votes = self.kick_votes[queue][victim]
         votes.add(player)
 
-        voters_str = ' | '.join(player.name for player in votes)
+        voters_str = " 💠 ".join(player.name for player in votes)
         await msg.channel.send(TRANSLATIONS[LANG]["vote_kick"].format(len(votes), votes_needed, victim, voters_str))
 
         if len(votes) >= votes_needed:
@@ -713,9 +700,7 @@ class Command(BaseCommand):
             # pretty format is tricky
             # TODO: let's move to discord embeds asap
             name_offset = 25 - len(p.name)
-            result = f'{p.name}: {" " * name_offset} {p.score}  ' \
-                     f'{p.wins}W-{p.losses}L  {p.ladder_mmr} ihMMR'
-
+            result = f'<{p.name}>{"." * name_offset}[{p.score}][{p.ladder_mmr}] {p.wins}W-{p.losses}P'
             return result
 
         command = msg.content
@@ -758,54 +743,6 @@ class Command(BaseCommand):
 
         kwargs.update({'bottom': True})
         await self.top_command(msg, **kwargs)
-
-    async def streak_command(self, msg, **kwargs):
-        command = msg.content
-        player = kwargs['player']
-        print(f'\n!streak command from {player}:\n{command}')
-
-        player = name = None
-        try:
-            name = command.split(None, 1)[1]
-        except (IndexError, ValueError):
-            #  if name is not provided, show current player
-            player = kwargs['player']
-
-        player = player or Command.get_player_by_name(name)
-        if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
-            return
-
-        mps = player.matchplayer_set.filter(match__season=LadderSettings.get_solo().current_season)
-        results = ['win' if x.team == x.match.winner else 'loss' for x in mps]
-
-        streaks = [list(g) for k, g in itertools.groupby(results)]
-
-        if not streaks:
-            await msg.channel.send(TRANSLATIONS[LANG]["no_streak"].format(self.player_mention(player)))
-            return
-
-        streak = streaks[0]
-        max_streak = max(streaks, key=len)
-
-        await msg.channel.send(TRANSLATIONS[LANG]["streak"].format(player, len(streak), "W" if streak[0] == "win" else "L", len(max_streak), "W" if max_streak[0] == "win" else "L"))
-
-    async def afk_ping_command(self, msg, **kwargs):
-        command = msg.content
-        player = kwargs['player']
-        print(f'\n!afk_ping command:\n{command}')
-
-        try:
-            mode = command.split(' ')[1]
-        except IndexError:
-            mode = ''
-
-        if mode.lower() in ['on', 'off']:
-            player.queue_afk_ping = True if mode.lower() == 'on' else False
-            player.save()
-            await msg.channel.send(TRANSLATIONS[LANG]["mode_changed"])
-        else:
-            await msg.channel.send(TRANSLATIONS[LANG]["mode"].format(player.name, "ON" if player.queue_afk_ping else "OFF"))
 
     async def role_command(self, msg, **kwargs):
         command = msg.content
@@ -858,13 +795,9 @@ class Command(BaseCommand):
             except ValueError:
                 await msg.channel.send(TRANSLATIONS[LANG]["very_funny"])
                 return
-        elif len(args) == 0:
-            # !role command without args, show current role prefs
-            await msg.channel.send(TRANSLATIONS[LANG]["current_roles"].format(player.name, Command.roles_str(roles)))
-            return
         else:
-            # wrong format, so just show help message
-            await msg.channel.send(TRANSLATIONS[LANG]["role_format"])
+            # !role command without args, show current role prefs
+            await msg.channel.send(TRANSLATIONS[LANG]["current_roles"].format(player.name, roles.carry, roles.mid, roles.offlane, roles.pos4, roles.pos5))
             return
 
         roles.save()
@@ -910,13 +843,13 @@ class Command(BaseCommand):
 
         mps = player.matchplayer_set.all()[:num]
         for mp in mps:
-            mp.result = 'win' if mp.team == mp.match.winner else 'loss'
+            mp.result = "🟢 Wygrana" if mp.team == mp.match.winner else "🔴 Przegrana"
 
         def match_str(mp):
             dotabuff = f'https://www.dotabuff.com/matches/{mp.match.dota_id}'
-            return f'{timeago.format(mp.match.date, timezone.now()):<15}{mp.result:<6}{dotabuff}'
+            return f'│ ` {timeago.format(mp.match.date, timezone.now()):<15}{mp.result:<6}{dotabuff}'
 
-        await msg.channel.send(TRANSLATIONS[LANG]["recent_matches"].format(num, player, '\n'.join(match_str(x) for x in mps), player_url))
+        await msg.channel.send(TRANSLATIONS[LANG]["recent_matches"].format(player, '\n'.join(match_str(x) for x in mps), player_url))
 
     # async def help_command(self, msg, **kwargs):
     #     commands_dict = self.get_available_bot_commands()
@@ -938,13 +871,22 @@ class Command(BaseCommand):
         master_text = ''
         # Iterate through the commands and gather aliases
         for group, texts in commands_dict.items():
-            master_text += f'\n\n{group}\n'
             for key, text in texts.items():
-                master_text += key + ": " + text + "\n"
+                master_text += "- " + key + ": `" + text + "`\n"
 
         # Create a string representation of commands and aliases
 
         await msg.channel.send(TRANSLATIONS[LANG]["help_command"].format(master_text))
+
+    async def admin_help_command(self, msg, **kwargs):
+        commands_dict = self.get_admin_help_commands()
+        master_text = ''
+
+        for group, texts in commands_dict.items():
+            for key, text in texts.items():
+                master_text += "- " + key + ": `" + text + "`\n"
+
+        await msg.channel.send(TRANSLATIONS[LANG]["admin_help_command"].format(master_text))
 
     async def registration_help_command(self, msg, **kwargs):
         print('jak command')
@@ -955,6 +897,7 @@ class Command(BaseCommand):
     async def set_name_command(self, msg, **kwargs):
         command = msg.content
         admin = kwargs['player']
+        #TODO HEREEEEEEEEEEE
         print(f'\n!set-name command from {admin}:\n{command}')
 
         try:
@@ -1257,20 +1200,12 @@ class Command(BaseCommand):
 
         game_str = ''
         if q.game_start_time:
+            
             time_game = timeago.format(q.game_start_time, timezone.now())
-            game_str = TRANSLATIONS[LANG]["game_start"].format(time_game, q.game_server)
+            #TODO change values in '<>' for actual values
+            return TRANSLATIONS[LANG]["game_start"].format(q.id, time_game, '<Radaiant Avg mmr>', '<Radiant players>', '<Dire Avg mmr>', '<Dire players>', q.game_server)
 
-        suffix = LadderSettings.get_solo().noob_queue_suffix
-
-        return TRANSLATIONS[LANG]["queue_str"].format(
-            q.id,
-            game_str,
-            f'Min MMR: {q.min_mmr}\n' if show_min_mmr else '\n',
-            q.players.count(),
-            f' | '.join(f'{p.name}-{p.ladder_mmr}' for p in players),
-            avg_mmr,
-            suffix if avg_mmr < 4000 else ""
-        )
+        return TRANSLATIONS[LANG]["queue_str"].format(q.id, avg_mmr, f'\n'.join(f'{i+1}. [#{p.rank}][{p.ladder_mmr}] <{p.name}>' for i, p in enumerate(players)))
 
     @staticmethod
     def roles_str(roles: RolesPreference):
@@ -1517,16 +1452,15 @@ class Command(BaseCommand):
                 '!wh/!who/!whois/!profile/!stats': TRANSLATIONS[LANG]["!wh/!who/!whois/!profile/!stats"],
                 '!top': TRANSLATIONS[LANG]["!top"],
                 '!bot/!bottom': TRANSLATIONS[LANG]["!bot/!bottom"],
-                '!streak': TRANSLATIONS[LANG]["!jak/!info"],
                 '!role/!roles': TRANSLATIONS[LANG]["!r/!reg"],
                 '!recent': TRANSLATIONS[LANG]["!recent"],
             },
+        }
+
+    def get_admin_help_commands(self):
+        return  {
             'Queue': {
-                '!join/!q+': TRANSLATIONS[LANG]["!join/!q+"],
-                '!leave/!q-': TRANSLATIONS[LANG]["!leave/!q-"],
-                '!list/!q': TRANSLATIONS[LANG]["!list/!q"],
                 '!vk/!votekick': TRANSLATIONS[LANG]["!vk/!votekick"],
-                '!afk-ping/!afkping': TRANSLATIONS[LANG]["!afk-ping/!afkping"],
             },
             'Admin': {
                 '!vouch': TRANSLATIONS[LANG]["!vouch"],
@@ -1542,7 +1476,7 @@ class Command(BaseCommand):
                 '!record-match': TRANSLATIONS[LANG]["!record-match"],
                 '!mmr': TRANSLATIONS[LANG]["!mmr"],
                 '!set-name/!rename': TRANSLATIONS[LANG]["!set-name/!rename"],
-            },
+            }
         }
 
     def get_available_bot_commands(self):
@@ -1556,12 +1490,6 @@ class Command(BaseCommand):
             '!ban': self.ban_command,
             '!unban': self.unban_command,
             '!stats': self.whois_command,
-            '!q+': self.join_queue_command,
-            '!q-': self.leave_queue_command,
-            '!q': self.show_queues_command,
-            '!join': self.join_queue_command,
-            '!leave': self.leave_queue_command,
-            '!list': self.show_queues_command,
             '!add': self.add_to_queue_command,
             '!kick': self.kick_from_queue_command,
             '!votekick': self.votekick_command,
@@ -1570,9 +1498,6 @@ class Command(BaseCommand):
             '!top': self.top_command,
             '!bot': self.bottom_command,
             '!bottom': self.bottom_command,
-            '!streak': self.streak_command,
-            '!afk-ping': self.afk_ping_command,
-            '!afkping': self.afk_ping_command,
             '!role': self.role_command,
             '!roles': self.role_command,
             '!recent': self.recent_matches_command,
@@ -1583,6 +1508,7 @@ class Command(BaseCommand):
             '!set-dota-id': self.set_dota_id_command,
             '!record-match': self.record_match_command,
             '!help': self.help_command,
+            '!adminhelp': self.admin_help_command,
             '!close': self.close_queue_command,
             '!reg': self.attach_help_buttons_to_msg,
             '!r': self.attach_help_buttons_to_msg,
