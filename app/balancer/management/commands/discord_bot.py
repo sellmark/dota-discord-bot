@@ -661,7 +661,8 @@ class Command(BaseCommand):
 
 
             ##TODO - multiline arguments
-            await msg.channel.send(TRANSLATIONS[LANG]["queue_full"].format(balanec_str, ' '.join(self.player_mention(p) for p in queue.players.all()), WATING_TIME_MINS))
+            ##TODO - not existing constant WATING_TIME_MINS
+            await msg.channel.send(TRANSLATIONS[LANG]["queue_full"].format(balance_str, ' '.join(self.player_mention(p) for p in queue.players.all()), WATING_TIME_MINS))
 
         await self.queues_show()
 
