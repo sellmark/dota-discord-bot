@@ -1372,19 +1372,18 @@ class Command(BaseCommand):
         if q.game_start_time:
 
             time_game = timeago.format(q.game_start_time, timezone.now())
-            #TODO change values in '<>' for actual values
 
             radiant, dire, radiant_mmr, dire_mmr = Command.get_teams_from_queue(q)
 
             _radiant = [(p.name, p.ladder_mmr) for p in radiant]
             _dire = [(p.name, p.ladder_mmr) for p in dire]
 
-            radiant_str = {"\n " . join([p.name for p in radiant])}
-            dire_str = {"\n ".join([p.name for p in dire])}
+            radiant_str = "\n".join([f'{i+1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in enumerate(radiant)])
+            dire_str = "\n".join([f'{i+1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in enumerate(dire)])
 
-            return TRANSLATIONS[LANG]["game_start"].format(q.id, time_game, radiant_mmr, radiant_str, dire_mmr, dire_str, q.game_server)
+            return TRANSLATIONS[LANG]["game_start"].format(q.id, time_game, radiant_mmr, radiant_str, dire_mmr, dire_str, q.id, q.game_server)
 
-        return TRANSLATIONS[LANG]["queue_str"].format(q.id, avg_mmr, f'\n'.join(f'{i+1}. [#{p.rank_score}][{p.rank_ladder_mmr}] <{p.name}>' for i, p in enumerate(players)))
+        return TRANSLATIONS[LANG]["queue_str"].format(q.id, avg_mmr, "\n".join([f'{i+1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in enumerate(players)))
 
     @staticmethod
     def roles_str(roles: RolesPreference):
