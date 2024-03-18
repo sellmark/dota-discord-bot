@@ -1133,6 +1133,69 @@ class Command(BaseCommand):
 
         await msg.channel.send(TRANSLATIONS[LANG]["match_recorded"].format(", ".join([p.name for p in radiant]), ", ".join([p.name for p in dire]), "Radiant" if winner == 0 else "Dire"))
 
+    async def record_match_from_queue(self, msg, **kwargs):
+        command = msg.content
+        admin = kwargs['player']
+        print(f'\n!record-queue command from {admin}:\n{command}')
+
+        try:
+            params = command.split()  # get params string
+            winner = params[1].lower()
+            queue_id = int(params[2])  # extract queue_id
+        except (IndexError, ValueError):
+            await msg.channel.send(
+                'Wrong command usage. '
+                'Correct example: `!record-queue dire 1234`')
+            return
+
+        if winner not in ['radiant', 'dire']:
+            await msg.channel.send(
+                f'Scientists are baffled. Dota has 2 teams: `radiant` and `dire`. '
+                f'You invented a third one: `{winner}`. Congratulations!')
+            return
+
+        try:
+            # Fetch the LadderQueue instance
+            queue = LadderQueue.objects.get(id=queue_id)
+            # Extract the BalanceAnswer from the queue instance
+            answer = queue.balance
+
+            # Extracting player identifiers for radiant and dire teams
+            radiant_team = answer.teams[0]
+            dire_team = answer.teams[1]
+
+            radiant_player_ids = [p[0] for p in radiant_team['players']]
+            dire_player_ids = [p[0] for p in dire_team['players']]
+
+            radiant = Player.objects.filter(name__in=radiant_player_ids)
+            dire = Player.objects.filter(name__in=dire_player_ids)
+
+            print(f'radiant: {radiant}')
+            print(f'dire: {dire}')
+
+            _radiant = [(p.name, p.ladder_mmr) for p in radiant]
+            _dire = [(p.name, p.ladder_mmr) for p in dire]
+            winner = 0 if winner == 'radiant' else 1
+
+            # print([_radiant, _dire])
+            balance = BalanceAnswerManager.balance_custom([_radiant, _dire])
+            MatchManager.record_balance(balance, winner)
+
+            await msg.channel.send(
+                f'```\n' +
+                f'Match recorded!\n\n' +
+                f'Radiant: {", ".join([p.name for p in radiant])}\n' +
+                f'Dire: {", ".join([p.name for p in dire])}\n' +
+                f'\n{"Radiant" if winner == 0 else "Dire"} won.\n'
+                f'\n```'
+            )
+        except LadderQueue.DoesNotExist:
+            await msg.channel.send(f'Error: Queue with ID {queue_id} does not exist.')
+            return
+        except AttributeError:
+            print('Error: Failed to extract players from balance answer.')
+            return
+
     async def close_queue_command(self, msg, **kwargs):
         command = msg.content
         player = kwargs['player']
@@ -1306,7 +1369,7 @@ class Command(BaseCommand):
             #TODO change values in '<>' for actual values
             return TRANSLATIONS[LANG]["game_start"].format(q.id, time_game, '<Radaiant Avg mmr>', '<Radiant players>', '<Dire Avg mmr>', '<Dire players>', q.game_server)
 
-        return TRANSLATIONS[LANG]["queue_str"].format(q.id, avg_mmr, f'\n'.join(f'{i+1}. [#{p.rank}][{p.ladder_mmr}] <{p.name}>' for i, p in enumerate(players)))
+        return TRANSLATIONS[LANG]["queue_str"].format(q.id, avg_mmr, f'\n'.join(f'{i+1}. [#{p.rank_score}][{p.rank_ladder_mmr}] <{p.name}>' for i, p in enumerate(players)))
 
     @staticmethod
     def roles_str(roles: RolesPreference):
