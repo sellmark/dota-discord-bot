@@ -9,6 +9,7 @@ INVALID_FORMAT_MESSAGE = ("Invalid command format. Please specify:\n"
                           "Example: \n"
                           "`!report SATO afk This guy is really annoying, beware of play with him!!!`")
 
+WAITING_TIME_MINS = 5
 
 import asyncio
 import datetime
@@ -53,7 +54,6 @@ def is_player_registered(msg, dota_id, name):
 
 class Command(BaseCommand):
     REGISTER_MSG_TEXT = TRANSLATIONS[LANG]["register_msg"]
-    WAITING_TIME_MINS = 5
 
     def __init__(self):
         super().__init__()
@@ -1158,20 +1158,8 @@ class Command(BaseCommand):
             # Fetch the LadderQueue instance
             queue = LadderQueue.objects.get(id=queue_id)
             # Extract the BalanceAnswer from the queue instance
-            answer = queue.balance
 
-            # Extracting player identifiers for radiant and dire teams
-            radiant_team = answer.teams[0]
-            dire_team = answer.teams[1]
-
-            radiant_player_ids = [p[0] for p in radiant_team['players']]
-            dire_player_ids = [p[0] for p in dire_team['players']]
-
-            radiant = Player.objects.filter(name__in=radiant_player_ids)
-            dire = Player.objects.filter(name__in=dire_player_ids)
-
-            print(f'radiant: {radiant}')
-            print(f'dire: {dire}')
+            radiant, dire, radiant_mmr, dire_mmr = Command.get_teams_from_queue(queue)
 
             _radiant = [(p.name, p.ladder_mmr) for p in radiant]
             _dire = [(p.name, p.ladder_mmr) for p in dire]
@@ -1280,7 +1268,7 @@ class Command(BaseCommand):
             finalize = TRANSLATIONS[LANG]["proposed_balance"].format(balance_str, f' '.join(self.player_mention(p) for p in queue.players.all()), WAITING_TIME_MINS)
             response += finalize
           
-            await msg.channel.send(finalize)
+            await self.queues_channel.send(finalize)
 
         return queue, True, response
 
@@ -1358,6 +1346,24 @@ class Command(BaseCommand):
         return result
 
     @staticmethod
+    def get_teams_from_queue(q):
+        answer = q.balance
+
+        radiant_team = answer.teams[0]
+        dire_team = answer.teams[1]
+
+        radiant_avg_mmr = str(radiant_team['mmr'])
+        dire_avg_mmr = str(dire_team['mmr'])
+
+        radiant_player_ids = [p[0] for p in radiant_team['players']]
+        dire_player_ids = [p[0] for p in dire_team['players']]
+
+        radiant_players = Player.objects.filter(name__in=radiant_player_ids)
+        dire_players = Player.objects.filter(name__in=dire_player_ids)
+
+        return radiant_players, dire_players, radiant_avg_mmr, dire_avg_mmr
+
+    @staticmethod
     def queue_str(q: LadderQueue, show_min_mmr=True):
         players = q.players.all()
         avg_mmr = round(mean(p.ladder_mmr for p in players))
@@ -1367,7 +1373,16 @@ class Command(BaseCommand):
 
             time_game = timeago.format(q.game_start_time, timezone.now())
             #TODO change values in '<>' for actual values
-            return TRANSLATIONS[LANG]["game_start"].format(q.id, time_game, '<Radaiant Avg mmr>', '<Radiant players>', '<Dire Avg mmr>', '<Dire players>', q.game_server)
+
+            radiant, dire, radiant_mmr, dire_mmr = Command.get_teams_from_queue(q)
+
+            _radiant = [(p.name, p.ladder_mmr) for p in radiant]
+            _dire = [(p.name, p.ladder_mmr) for p in dire]
+
+            radiant_str = {"\n " . join([p.name for p in radiant])}
+            dire_str = {"\n ".join([p.name for p in dire])}
+
+            return TRANSLATIONS[LANG]["game_start"].format(q.id, time_game, radiant_mmr, radiant_str, dire_mmr, dire_str, q.game_server)
 
         return TRANSLATIONS[LANG]["queue_str"].format(q.id, avg_mmr, f'\n'.join(f'{i+1}. [#{p.rank_score}][{p.rank_ladder_mmr}] <{p.name}>' for i, p in enumerate(players)))
 
