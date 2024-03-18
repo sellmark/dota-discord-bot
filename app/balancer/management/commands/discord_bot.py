@@ -53,6 +53,7 @@ def is_player_registered(msg, dota_id, name):
 
 class Command(BaseCommand):
     REGISTER_MSG_TEXT = TRANSLATIONS[LANG]["register_msg"]
+    WAITING_TIME_MINS = 5
 
     def __init__(self):
         super().__init__()
@@ -448,8 +449,6 @@ class Command(BaseCommand):
         reports_count = PlayerReport.objects.filter(to_player=player, value__lt=0).count()
         tips_count = PlayerReport.objects.filter(to_player=player, value__gt=0).count()
 
-        ##TODO: use above variables to show in !wh command
-
         mps = player.matchplayer_set.filter(match__season=LadderSettings.get_solo().current_season)
         results = ['win' if x.team == x.match.winner else 'loss' for x in mps]
         streaks = [list(g) for k, g in itertools.groupby(results)]
@@ -476,6 +475,8 @@ class Command(BaseCommand):
             f'{"+" if streak and streak[0] == "win" else "-"}{len(streak)}',
             winning_streak,
             losing_streak,
+            tips_count,
+            reports_count,
             player.roles.carry,
             player.roles.mid,
             player.roles.offlane,
@@ -659,10 +660,8 @@ class Command(BaseCommand):
                 balance_str = f'Proposed balance: \n' + \
                               Command.balance_str(queue.balance)
 
-
             ##TODO - multiline arguments
-            ##TODO - not existing constant WATING_TIME_MINS
-            await msg.channel.send(TRANSLATIONS[LANG]["queue_full"].format(balance_str, ' '.join(self.player_mention(p) for p in queue.players.all()), WATING_TIME_MINS))
+            await msg.channel.send(TRANSLATIONS[LANG]["queue_full"].format(balance_str, ' '.join(self.player_mention(p) for p in queue.players.all()), WAITING_TIME_MINS))
 
         await self.queues_show()
 
@@ -969,7 +968,7 @@ class Command(BaseCommand):
     async def set_name_command(self, msg, **kwargs):
         command = msg.content
         admin = kwargs['player']
-        #TODO HEREEEEEEEEEEE
+
         print(f'\n!set-name command from {admin}:\n{command}')
 
         try:
@@ -1214,11 +1213,11 @@ class Command(BaseCommand):
             balance_str = ''
             if LadderSettings.get_solo().draft_mode == LadderSettings.AUTO_BALANCE:
                 balance_str = TRANSLATIONS[LANG]["balance_str"].format(Command.balance_str(queue.balance))
-
-            response += TRANSLATIONS[LANG]["proposed_balance"].format(balance_str, f' '.join(self.player_mention(p) for p in queue.players.all()), WATING_TIME_MINS)
-            ##TODO: tutaj było wysyłanie na kanał, jest gdzieś indziej teraz?
-            ## await self.chat_channel.send(f'**Gra #{queue.id} ruszyła!**\n{mention_str}')
-
+            
+            finalize = TRANSLATIONS[LANG]["proposed_balance"].format(balance_str, f' '.join(self.player_mention(p) for p in queue.players.all()), WAITING_TIME_MINS)
+            response += finalize
+          
+            await msg.channel.send(finalize)
 
         return queue, True, response
 
@@ -1338,7 +1337,7 @@ class Command(BaseCommand):
         if auto_balance and show_balance:
             balance_str = TRANSLATIONS[LANG]["balance_str"].format(Command.balance_str(queue.balance))
 
-        return TRANSLATIONS[LANG]["proposed_balance"].format(balance_str, f' '.join(self.player_mention(p) for p in queue.players.all()), WATING_TIME_MINS)
+        return TRANSLATIONS[LANG]["proposed_balance"].format(balance_str, f' '.join(self.player_mention(p) for p in queue.players.all()), WAITING_TIME_MINS)
 
     def player_mention(self, player):
         discord_id = int(player.discord_id) if player.discord_id else 0
