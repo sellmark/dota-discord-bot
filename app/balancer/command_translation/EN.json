@@ -62,7 +62,7 @@
   "joined_inhouse": "{} joined inhouse queue.\n{}",
   "balance_str": "Proposed balance: \n{}",
   "proposed_balance": "Queue is full!\n{}\n{}\nYou have {} min to join the lobby",
-  "game_start": "The game {} has started {}. Radiant Avg mmr {}\n{}\n\n Dire avg mmr {}\n\n{}\n\nWatch here: {}\n",
+  "game_start": "The game {} has started {}. Radiant Avg mmr {}\n{}\n\n Dire avg mmr {}\n\n{}\n\nLobby #{}\nWatch here: {}\n",
   "queue_str": "```\nQueue: #{}\n{}\n{} Gracze: {} ({})\n\nAverage MMR: {} {}\n```",
   "afk_check": "{}, it has been a while. React if you are still aroundd. You have {} min left.",
   "purge": "Purged all afk players from the queue!\n```\n{}\n```",
