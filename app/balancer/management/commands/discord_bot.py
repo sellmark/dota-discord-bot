@@ -186,7 +186,7 @@ class Command(BaseCommand):
             if type == 'green':
                 q_channel = QueueChannel.objects.filter(discord_msg=value).first()
 
-                _, _, response = await self.player_join_queue(player, q_channel)
+                _, _, response= await self.player_join_queue(player, q_channel)
                 embed = discord.Embed(title=TRANSLATIONS[LANG]["queue_join"],
                                       description=response,
                                       color=discord.Color.green())
@@ -1254,21 +1254,20 @@ class Command(BaseCommand):
 
         queue = Command.add_player_to_queue(player, channel)
 
-        response = TRANSLATIONS[LANG]["joined_inhouse"].format(player, queue.id) + \
-                   Command.queue_str(queue)
+        response = TRANSLATIONS[LANG]["joined_inhouse"].format(player, queue.id)
 
+        is_queue_full = False
         # TODO: this is a separate function
         if queue.players.count() == 10:
+            is_queue_full = True
             Command.balance_queue(queue)  # todo move this to QueuePlayer signal
 
-            balance_str = ''
-            if LadderSettings.get_solo().draft_mode == LadderSettings.AUTO_BALANCE:
-                balance_str = TRANSLATIONS[LANG]["balance_str"].format(Command.balance_str(queue.balance))
-            
-            finalize = TRANSLATIONS[LANG]["proposed_balance"].format(balance_str, f' '.join(self.player_mention(p) for p in queue.players.all()), WAITING_TIME_MINS)
-            response += finalize
+            mention_str = f' '.join(self.player_mention(p) for p in queue.players.all())
+            finalize = TRANSLATIONS[LANG]["proposed_balance"].format('', mention_str, WAITING_TIME_MINS)
+            response = TRANSLATIONS[LANG]["joined_inhouse"].format(player, queue.id)
           
             await self.queues_channel.send(finalize)
+            await self.chat_channel.send(finalize)
 
         return queue, True, response
 
@@ -1383,7 +1382,12 @@ class Command(BaseCommand):
 
             return TRANSLATIONS[LANG]["game_start"].format(q.id, time_game, radiant_mmr, radiant_str, dire_mmr, dire_str, q.id, q.game_server)
 
-        return TRANSLATIONS[LANG]["queue_str"].format(q.id, avg_mmr, "\n".join([f'{i+1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in enumerate(players)))
+        return TRANSLATIONS[LANG]["queue_str"].format(
+            q.id,
+            avg_mmr,
+            "\n".join([f'{i + 1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in
+                       enumerate(players)])
+        )
 
     @staticmethod
     def roles_str(roles: RolesPreference):
@@ -1568,8 +1572,8 @@ class Command(BaseCommand):
 
         if q.players.count() == 10:
             auto_balance = LadderSettings.get_solo().draft_mode == LadderSettings.AUTO_BALANCE
-            if auto_balance:
-                q_string += self.balance_str(q.balance, verbose=q.active) + '\n'
+            # if auto_balance:
+                # q_string += self.balance_str(q.balance, verbose=q.active) + '\n'
 
         return q_string
 
