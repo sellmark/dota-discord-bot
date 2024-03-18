@@ -883,7 +883,7 @@ class Command(BaseCommand):
             return
 
         roles.save()
-        await msg.channel.send(TRANSLATIONS[LANG]["new_roles"].format(player.name, Command.roles_str(roles)))
+        await msg.channel.send(TRANSLATIONS[LANG]["current_roles"].format(player.name, roles.carry, roles.mid, roles.offlane, roles.pos4, roles.pos5))
 
     async def recent_matches_command(self, msg, **kwargs):
         command = msg.content
