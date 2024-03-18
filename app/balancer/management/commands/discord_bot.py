@@ -925,11 +925,11 @@ class Command(BaseCommand):
 
         mps = player.matchplayer_set.all()[:num]
         for mp in mps:
-            mp.result = "🟢 Wygrana" if mp.team == mp.match.winner else "🔴 Przegrana"
+            mp.result = "🟢 Wygrana " if mp.team == mp.match.winner else "🔴 Przegrana "
 
         def match_str(mp):
             dotabuff = f'https://www.dotabuff.com/matches/{mp.match.dota_id}'
-            return f'│ ` {timeago.format(mp.match.date, timezone.now()):<15}{mp.result:<6}{dotabuff}'
+            return f'│ ` {timeago.format(mp.match.date, timezone.now()):<15}{mp.result:<13}{dotabuff}'
 
         await msg.channel.send(TRANSLATIONS[LANG]["recent_matches"].format(player, '\n'.join(match_str(x) for x in mps), player_url))
 
