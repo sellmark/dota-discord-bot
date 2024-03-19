@@ -133,8 +133,13 @@ class Command(BaseCommand):
                     discord_main = fields[2]
                     await self.register_new_player(message, discord_main, mmr, steam_id)
 
+
         @self.bot.event
         async def on_message(msg):
+            if msg.guild is None:
+                await self.bot_cmd(msg)
+                return
+
             await on_register_form_answer(msg)
             self.last_seen[msg.author.id] = timezone.now()
 
@@ -294,6 +299,7 @@ class Command(BaseCommand):
         command = msg.content.split(' ')[0].lower()
 
         commands = self.get_available_bot_commands()
+        direct_message = ['!report']
         free_for_all = ['!register', '!help', '!reg', '!r', '!jak', '!info', '!list', '!q']
         staff_only = [
             '!vouch', '!add', '!kick', '!mmr', '!ban', '!unban',
@@ -309,6 +315,14 @@ class Command(BaseCommand):
             '!reg', '!r', '!rename', '!jak', '!info', '!list', '!q', 'rename', '!my-dota-id',
             '!report', '!tip', '!reports', '!tips',
         ]
+
+        if msg.guild is None:
+            if command not in direct_message:
+                return
+            print("command in direct mess")
+            msg.channel = msg.author
+            await commands[command](msg)
+            return
 
         # if this is a chat channel, check if command is allowed
         if msg.channel.id == DiscordChannels.get_solo().chat:
@@ -529,14 +543,16 @@ class Command(BaseCommand):
             await msg.channel.send(f"Player '{player_name}' not found.")
             return
 
+        one_day_ago = timezone.now() - timedelta(days=1)
+
         # Fetch all tips for the player
-        tips = PlayerReport.objects.filter(to_player=player, value__lt=0).order_by('-id')
+        tips = PlayerReport.objects.filter(to_player=player, value__lt=0, report_date__lt=one_day_ago).order_by('-id')[:10]
 
         if tips.exists():
             tips_list = '\n'.join(
-                [f"{tip.from_player.name}: {tip.comment} (Match ID: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
+                [f"{tip.report_date.strftime('%Y-%m-%d %H:%M:%S')} {tip.from_player.name}: {tip.reason} {tip.comment} (Match ID: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
                  tips])
-            await msg.channel.send(f"**Reports for {player.name}:**\n```{tips_list}```")
+            await msg.channel.send(f"**Last 10 Reports for {player.name}:**\n```{tips_list}```")
         else:
             await msg.channel.send(f"No reports found for {player.name}.")
 
@@ -1599,6 +1615,16 @@ class Command(BaseCommand):
             return TRANSLATIONS[LANG]["not_in_this_queue"].format(player.name)
 
     async def handle_report_tip_command(self, msg, is_tip: bool, **kwargs):
+        # Prevent bot from responding to its own messages
+        if msg.author == self.bot.user:
+            return
+
+        # Check if the message is a private message
+        if not msg.guild is None and is_tip == False:
+            # Respond to the message
+            await msg.channel.send('Let\'s keep it private.')
+            return
+
         parts = msg.content.split()
         if len(parts) < 3:
             await msg.channel.send(INVALID_FORMAT_MESSAGE)

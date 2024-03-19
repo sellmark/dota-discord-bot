@@ -1,6 +1,7 @@
 from collections import defaultdict
 from decimal import Decimal
 from datetime import timedelta, timezone
+from django.utils import timezone as DjangoTimezone
 from django.core.cache import cache
 import itertools
 from app.ladder.models import Player, MatchPlayer, Match, LadderSettings, PlayerReport
@@ -248,9 +249,11 @@ class PlayerOverview(PlayerDetail):
         self.add_matches_data()
         context = super(PlayerOverview, self).get_context_data(**kwargs)
         player = self.object
+        one_day_ago = DjangoTimezone.now() - timedelta(days=1)
         reports = PlayerReport.objects.filter(
             to_player=player,
-            value__lt=0
+            value__lt=0,
+            report_date__lt=one_day_ago
         ).order_by('-report_date')[:10]  # Last 10 reports
 
         tips = PlayerReport.objects.filter(
