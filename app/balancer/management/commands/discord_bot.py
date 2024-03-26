@@ -17,6 +17,7 @@ import itertools
 import re
 from collections import defaultdict, deque
 from datetime import timedelta
+from datetime import datetime
 import random
 from statistics import mean
 
@@ -403,10 +404,7 @@ class Command(BaseCommand):
         channel = self.bot.get_channel(chat_channel)
         await msg.channel.send(TRANSLATIONS[LANG]["welcome"].format(name, queue_channel))
 
-        ##TODO: finish translations for second msg
-        await channel.send(
-            f"""**Witamy nowego gracza {self.player_mention(player)} :tada: :tada:**"""
-        )
+        await channel.send(TRANSLATIONS[LANG]["welcome"].format(name, queue_channel))
 
 
     async def vouch_command(self, msg, **kwargs):
@@ -518,15 +516,15 @@ class Command(BaseCommand):
             return
 
         # Fetch all tips for the player
-        tips = PlayerReport.objects.filter(to_player=player, value__gt=0).order_by('-id')
+        tips = PlayerReport.objects.filter(to_player=player, value__gt=0).order_by('-id')[:5]
 
         if tips.exists():
             tips_list = '\n'.join(
-                [f"{tip.from_player.name}: {tip.comment} (Match ID: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
+                [f"│ 👍 <{tip.from_player.name}> [{tip.comment}] (Mecz: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
                  tips])
-            await msg.channel.send(f"**Tips for {player.name}:**\n```{tips_list}```")
+            await msg.channel.send(TRANSLATIONS[LANG]["show_tips"].format(player.name, tips_list));
         else:
-            await msg.channel.send(f"No tips found for {player.name}.")
+            await msg.channel.send(TRANSLATIONS[LANG]["no_tips"].format(player.name));
 
     async def handle_show_reports_command(self, msg, **kwargs):
         # Extract the player name from the message
@@ -546,15 +544,15 @@ class Command(BaseCommand):
         one_day_ago = timezone.now() - timedelta(days=1)
 
         # Fetch all tips for the player
-        tips = PlayerReport.objects.filter(to_player=player, value__lt=0, report_date__lt=one_day_ago).order_by('-id')[:10]
+        tips = PlayerReport.objects.filter(to_player=player, value__lt=0, report_date__lt=one_day_ago).order_by('-id')[:5]
 
         if tips.exists():
             tips_list = '\n'.join(
-                [f"{tip.report_date.strftime('%Y-%m-%d %H:%M:%S')} {tip.from_player.name}: {tip.reason} {tip.comment} (Match ID: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
+                [f"│ ☠️ <{tip.from_player.name}> [{tip.comment}] (Mecz: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
                  tips])
-            await msg.channel.send(f"**Last 10 Reports for {player.name}:**\n```{tips_list}```")
+            await msg.channel.send(TRANSLATIONS[LANG]["show_reports"].format(player.name, tips_list));
         else:
-            await msg.channel.send(f"No reports found for {player.name}.")
+            await msg.channel.send(TRANSLATIONS[LANG]["no_reports"].format(player.name));
 
     async def ban_command(self, msg, **kwargs):
         command = msg.content
@@ -954,16 +952,10 @@ class Command(BaseCommand):
         master_text = ''
 
         for group, texts in commands_dict.items():
-            master_text += f'\n\n{group}\n'
             for key, text in texts.items():
-                master_text += key + ": " + text + "\n"
+                master_text += key + ": `" + text + "`\n"
 
-        await msg.channel.send(
-            f'```\n' +
-            f'Lista komend:\n' +
-            master_text +
-            f'\n```\n'
-        )
+        await msg.channel.send(TRANSLATIONS[LANG]["help_command"].format(master_text))
 
     async def admin_help_command(self, msg, **kwargs):
         commands_dict = self.get_admin_help_commands()
@@ -1016,7 +1008,7 @@ class Command(BaseCommand):
 
         player = Player.objects.filter(discord_id=msg.author.id).first()
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_commamnd"].format(msg.author.mention))
+            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_command"].format(msg.author.mention))
             return
 
         try:
@@ -1386,7 +1378,7 @@ class Command(BaseCommand):
         game_str = ''
         if q.game_start_time:
 
-            time_game = timeago.format(q.game_start_time, timezone.now())
+            time_game = int((datetime.timestamp(timezone.now()) - datetime.timestamp(q.game_start_time))\60)
 
             radiant, dire, radiant_mmr, dire_mmr = Command.get_teams_from_queue(q)
 
@@ -1622,7 +1614,7 @@ class Command(BaseCommand):
         # Check if the message is a private message
         if not msg.guild is None and is_tip == False:
             # Respond to the message
-            await msg.channel.send('Let\'s keep it private.')
+            await msg.channel.send(TRANSLATIONS[LANG]["report_in_dm"])
             return
 
         parts = msg.content.split()
@@ -1695,7 +1687,14 @@ class Command(BaseCommand):
                 '!bot/!bottom': TRANSLATIONS[LANG]["!bot/!bottom"],
                 '!role/!roles': TRANSLATIONS[LANG]["!r/!reg"],
                 '!recent': TRANSLATIONS[LANG]["!recent"],
+                '!report': TRANSLATIONS[LANG]["!report"],
+                '!tip': TRANSLATIONS[LANG]["!tip"],
+                '!reports': TRANSLATIONS[LANG]["!reports"],
+                '!tips': TRANSLATIONS[LANG]["!tips"],
             },
+            'Queue': {
+                '!vk/!votekick': TRANSLATIONS[LANG]["!vk/!votekick"],
+            }
         }
 
     def get_admin_help_commands(self):
