@@ -455,6 +455,9 @@ class Command(BaseCommand):
         max_streak = {}
         losing_streak = 0
         winning_streak = 0
+        escaped_name = player.name.replace('_', '-')
+        print([player.name, escaped_name])
+
         if len(streaks):
             streak = streaks[0]
             max_streak = max(streaks, key=len)
@@ -465,7 +468,7 @@ class Command(BaseCommand):
                     winning_streak = len(s)
 
         await msg.channel.send(t("whois_stats").format(
-            player.name,
+            escaped_name,
             player.rank_score,
             player.ladder_mmr,
             player.dota_mmr,
@@ -489,12 +492,13 @@ class Command(BaseCommand):
     async def handle_show_tips_command(self, msg, **kwargs):
         # Extract the player name from the message
         player = kwargs['player']
-        parts = msg.content.split(maxsplit=1)
-        if len(parts) < 2:
-            await msg.channel.send("Please specify a player name.")
-            return
 
-        player_name = parts[1]
+        parts = msg.content.split(maxsplit=1)
+        if len(parts) == 2:
+            player_name = parts[1]
+        else:
+            player_name = player.name
+
 
         try:
             player = Command.get_player_by_name(player_name)
@@ -515,17 +519,18 @@ class Command(BaseCommand):
 
     async def handle_show_reports_command(self, msg, **kwargs):
         # Extract the player name from the message
-        parts = msg.content.split(maxsplit=1)
-        if len(parts) < 2:
-            await msg.channel.send("Please specify a player name.")
-            return
+        player = kwargs['player']
 
-        player_name = parts[1]
+        parts = msg.content.split(maxsplit=1)
+        if len(parts) == 2:
+            player_name = parts[1]
+        else:
+            player_name = player.name
 
         try:
             player = Command.get_player_by_name(player_name)
         except Player.DoesNotExist:
-            await msg.channel.send(f"Player '{player_name}' not found.")
+            await msg.channel.send(t("report_could_not_list_reports").format(player_name))
             return
 
         one_day_ago = timezone.now() - timedelta(days=1)
@@ -782,7 +787,10 @@ class Command(BaseCommand):
         def player_str(p):
             # pretty format is tricky
             # TODO: let's move to discord embeds asap
-            name_offset = 25 - len(p.name)
+            # Escape underscores in p.name
+            escaped_name = p.name.replace('_', '\_')
+            name_offset = 25 - len(escaped_name)
+
             result = f'<{p.name}>{"." * name_offset}[{p.score}][{p.ladder_mmr}] {p.wins}W-{p.losses}P'
             return result
 

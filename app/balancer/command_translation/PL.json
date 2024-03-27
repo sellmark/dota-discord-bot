@@ -78,6 +78,7 @@
   "report_cannot_self": "Nie możesz reportować siebie, c'mon.",
   "report_success_msg": "{} zreportował {} w meczu: {} z komentarzem: \n{}",
   "report_could_not_find_players": "Nie znaleziono reportowanego gracza",
+  "report_could_not_list_reports": "Nie znaleziono reportowanego gracza {}",
   "tip_success_msg": "{} znapiwkował {} w meczu: {} z komentarzem: \n{}",
   "signed_players": "⌛│Kolejka {}",
   "!help": "Podstawowe informacje o komendach",
