@@ -10,3 +10,7 @@ LANG = "PL"
 with open(os.path.join(BASE_DIR, "./app/balancer/command_translation/PL.json"), encoding="utf-8") as polish_file:
     polish = json.load(polish_file)
     TRANSLATIONS["PL"] = polish
+
+def t(translation_string: str):
+    generic_message = "Translation for this system string is not available, call the admin!"
+    return TRANSLATIONS[LANG].get(translation_string, generic_message)

@@ -1,14 +1,3 @@
-REPORT_SUCCESS_MESSAGE = "{} has reported {} for {} in match: {} with this comment: \n{}"
-TIP_SUCCESS_MESSAGE = "{} has tipped {} for {} in match: {} with this comment: \n{}"
-PLAYER_NOT_FOUND_MESSAGE = "Could not find one or both players."
-CANNOT_REPORT_SELF = "Cannot report/tip yourself."
-SIGNED_PLAYERS = "⌛│Kolejka {}"
-
-INVALID_FORMAT_MESSAGE = ("Invalid command format. Please specify:\n"
-                          "Player Reason Match ID(skip if reporting last game) and a Comment(max 255 chars) \n"
-                          "Example: \n"
-                          "`!report SATO afk This guy is really annoying, beware of play with him!!!`")
-
 WAITING_TIME_MINS = 5
 
 import asyncio
@@ -18,7 +7,6 @@ import re
 from collections import defaultdict, deque
 from datetime import timedelta
 from datetime import datetime
-import random
 from statistics import mean
 
 import discord
@@ -31,7 +19,7 @@ from django.core.management.base import BaseCommand
 import os
 
 from django.core.urlresolvers import reverse
-from django.db.models import Q, Count, Prefetch, Case, When, F
+from django.db.models import Q, Count, Case, When, F
 from django.utils import timezone
 
 from app.balancer.managers import BalanceResultManager, BalanceAnswerManager
@@ -40,10 +28,9 @@ from app.ladder.managers import MatchManager, QueueChannelManager
 from app.ladder.models import Player, LadderSettings, LadderQueue, QueuePlayer, QueueChannel, MatchPlayer, \
     RolesPreference, DiscordChannels, DiscordPoll, ScoreChange, PlayerReport
 
-from app.balancer.management.commands.discord.poll_commands import PollService
 from app.balancer.management.commands.discord.report_tip_commands import ReportTipCommands
 
-from app.balancer.command_translation.translations import TRANSLATIONS, LANG
+from app.balancer.command_translation.translations import t, TRANSLATIONS, LANG
 
 def is_player_registered(msg, dota_id, name):
     # check if we can register this player
@@ -54,7 +41,7 @@ def is_player_registered(msg, dota_id, name):
 
 
 class Command(BaseCommand):
-    REGISTER_MSG_TEXT = TRANSLATIONS[LANG]["register_msg"]
+    REGISTER_MSG_TEXT = t("register_msg")
 
     def __init__(self):
         super().__init__()
@@ -181,7 +168,7 @@ class Command(BaseCommand):
                     await interaction.defer()
                     return
 
-                text = TRANSLATIONS[LANG]["register_form"].format({self.unregistered_mention(interaction.author)})
+                text = t("register_form").format({self.unregistered_mention(interaction.author)})
 
                 await interaction.author.send(text)
 
@@ -193,7 +180,7 @@ class Command(BaseCommand):
                 q_channel = QueueChannel.objects.filter(discord_msg=value).first()
 
                 _, _, response= await self.player_join_queue(player, q_channel)
-                embed = discord.Embed(title=TRANSLATIONS[LANG]["queue_join"],
+                embed = discord.Embed(title=t("queue_join"),
                                       description=response,
                                       color=discord.Color.green())
                 # We can also send self-hiding responses to the message via:
@@ -212,14 +199,14 @@ class Command(BaseCommand):
                     return
 
                 if not vouched_player:
-                    embed = discord.Embed(title= TRANSLATIONS[LANG]["vouch_error"],
+                    embed = discord.Embed(title= t("vouch_error"),
                                           color=discord.Color.red())
                     await interaction.message.edit(embed=embed)
                     return
 
                 await self.player_vouched(vouched_player)
-                embed = discord.Embed(title=TRANSLATIONS[LANG]["player_vouch"],
-                                      description=TRANSLATIONS[LANG]["approved_by"].format(value, player.name),
+                embed = discord.Embed(title=t("player_vouch"),
+                                      description=t("approved_by").format(value, player.name),
                                       color=discord.Color.blue())
                 await interaction.edit(embed=embed)
                 await self.purge_buttons_from_msg(interaction.message)
@@ -229,7 +216,7 @@ class Command(BaseCommand):
 
         @tasks.loop(seconds=302)
         async def update_voice_channel():
-            await self.voice_channel.edit(name=SIGNED_PLAYERS.format(f"{len(self.queued_players)}/10"))
+            await self.voice_channel.edit(name=t("signed_players").format(f"{len(self.queued_players)}/10"))
 
         @tasks.loop(minutes=5)
         async def queue_afk_check():
@@ -341,18 +328,18 @@ class Command(BaseCommand):
         except Player.DoesNotExist:
             mention = self.unregistered_mention(msg.author)
             print(mention)
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_command"].format(mention))
+            await msg.channel.send(t("unregistered_command").format(mention))
             return
 
         if player.banned:
-            await msg.channel.send(TRANSLATIONS[LANG]["banned"].format(msg.author.name))
+            await msg.channel.send(t("banned").format(msg.author.name))
             return
 
         # check permissions when needed
         if not player.bot_access:
             # only staff can use this commands
             if command in staff_only:
-                await msg.channel.send(TRANSLATIONS[LANG]["staff_only"].format(msg.author.name))
+                await msg.channel.send(t("staff_only").format(msg.author.name))
                 return
 
         # user can use this command
@@ -372,11 +359,11 @@ class Command(BaseCommand):
             mmr = int(params[1])
             dota_id = str(int(params[2]))  # check that id is a number
         except (IndexError, ValueError):
-            await msg.channel.send(TRANSLATIONS[LANG]["register_format"])
+            await msg.channel.send(t("register_format"))
             return
 
         if not 0 <= mmr < 12000:
-            sent_message = await msg.channel.send(TRANSLATIONS[LANG]["very_funny"])
+            sent_message = await msg.channel.send(t("very_funny"))
 
             return
 
@@ -384,7 +371,7 @@ class Command(BaseCommand):
 
     async def register_new_player(self, msg, name, mmr, dota_id):
         if is_player_registered(msg, dota_id, name):
-            await msg.channel.send(TRANSLATIONS[LANG]["already_registered"])
+            await msg.channel.send(t("already_registered"))
             return
 
         # all is good, can register
@@ -402,9 +389,9 @@ class Command(BaseCommand):
         queue_channel = DiscordChannels.get_solo().queues
         chat_channel = DiscordChannels.get_solo().chat
         channel = self.bot.get_channel(chat_channel)
-        await msg.channel.send(TRANSLATIONS[LANG]["welcome"].format(name, queue_channel))
+        await msg.channel.send(t("welcome").format(name, queue_channel))
 
-        await channel.send(TRANSLATIONS[LANG]["welcome"].format(name, queue_channel))
+        await channel.send(t("welcome").format(name, queue_channel))
 
 
     async def vouch_command(self, msg, **kwargs):
@@ -420,12 +407,12 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+            await msg.channel.send(t("unregistered_user").format(name))
             return
 
         await self.player_vouched(player)
 
-        await msg.channel.send(TRANSLATIONS[LANG]["vouched"].format(self.player_mention(player)))
+        await msg.channel.send(t("vouched").format(self.player_mention(player)))
 
     async def whois_command(self, msg, **kwargs):
         command = msg.content
@@ -442,7 +429,7 @@ class Command(BaseCommand):
 
         player = player or Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+            await msg.channel.send(t("unregistered_user").format(name))
             return
 
         dotabuff = f'https://www.dotabuff.com/players/{player.dota_id}'
@@ -477,7 +464,7 @@ class Command(BaseCommand):
                 if len(s) > losing_streak and s[0] == "loss":
                     winning_streak = len(s)
 
-        await msg.channel.send(TRANSLATIONS[LANG]["whois_stats"].format(
+        await msg.channel.send(t("whois_stats").format(
             player.name,
             player.rank_score,
             player.ladder_mmr,
@@ -522,9 +509,9 @@ class Command(BaseCommand):
             tips_list = '\n'.join(
                 [f"│ 👍 <{tip.from_player.name}> [{tip.comment}] (Mecz: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
                  tips])
-            await msg.channel.send(TRANSLATIONS[LANG]["show_tips"].format(player.name, tips_list));
+            await msg.channel.send(t("show_tips").format(player.name, tips_list));
         else:
-            await msg.channel.send(TRANSLATIONS[LANG]["no_tips"].format(player.name));
+            await msg.channel.send(t("no_tips").format(player.name));
 
     async def handle_show_reports_command(self, msg, **kwargs):
         # Extract the player name from the message
@@ -550,9 +537,9 @@ class Command(BaseCommand):
             tips_list = '\n'.join(
                 [f"│ ☠️ <{tip.from_player.name}> [{tip.comment}] (Mecz: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
                  tips])
-            await msg.channel.send(TRANSLATIONS[LANG]["show_reports"].format(player.name, tips_list));
+            await msg.channel.send(t("show_reports").format(player.name, tips_list))
         else:
-            await msg.channel.send(TRANSLATIONS[LANG]["no_reports"].format(player.name));
+            await msg.channel.send(t("no_reports").format(player.name))
 
     async def ban_command(self, msg, **kwargs):
         command = msg.content
@@ -566,13 +553,13 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+            await msg.channel.send(t("unregistered_user").format(name))
             return
 
         player.banned = Player.BAN_PLAYING
         player.save()
 
-        await msg.channel.send(TRANSLATIONS[LANG]["ban_message"].format(player.name))
+        await msg.channel.send(t("ban_message").format(player.name))
 
     async def unban_command(self, msg, **kwargs):
         command = msg.content
@@ -586,13 +573,13 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+            await msg.channel.send(t("unregistered_user").format(name))
             return
 
         player.banned = None
         player.save()
 
-        await msg.channel.send(TRANSLATIONS[LANG]["unban_message"].format(player.name))
+        await msg.channel.send(t("unban_message").format(player.name))
 
     async def attach_join_buttons_to_queue_msg(self, msg, **kwargs):
         await self.attach_buttons_to_msg(msg, [
@@ -614,7 +601,7 @@ class Command(BaseCommand):
 
     async def attach_help_buttons_to_msg(self, msg):
         if is_player_registered(msg, 0, "blank"):
-            await msg.channel.send(TRANSLATIONS[LANG]["already_registered"])
+            await msg.channel.send(t("already_registered"))
             return
 
         await msg.author.send(components=[
@@ -652,18 +639,18 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+            await msg.channel.send(t("unregistered_user").format(name))
             return
 
         # check that player is not in a queue already
         if player.ladderqueue_set.filter(active=True):
-            await msg.channel.send(TRANSLATIONS[LANG]["already_in_queue"].format(player))
+            await msg.channel.send(t("already_in_queue").format(player))
             return
 
         channel = QueueChannel.objects.get(discord_id=msg.channel.id)
         queue = Command.add_player_to_queue(player, channel)
 
-        await msg.channel.send(TRANSLATIONS[LANG]["forced_queue"].format(msg.author, self.player_mention(player)))
+        await msg.channel.send(t("forced_queue").format(msg.author, self.player_mention(player)))
 
         # TODO: this is a separate function
         if queue.players.count() == 10:
@@ -675,7 +662,7 @@ class Command(BaseCommand):
                               Command.balance_str(queue.balance)
 
             ##TODO - multiline arguments
-            await msg.channel.send(TRANSLATIONS[LANG]["queue_full"].format(balance_str, ' '.join(self.player_mention(p) for p in queue.players.all()), WAITING_TIME_MINS))
+            await msg.channel.send(t("queue_full").format(balance_str, ' '.join(self.player_mention(p) for p in queue.players.all()), WAITING_TIME_MINS))
 
         await self.queues_show()
 
@@ -690,7 +677,7 @@ class Command(BaseCommand):
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+            await msg.channel.send(t("unregistered_user").format(name))
             return
 
         deleted, _ = QueuePlayer.objects \
@@ -700,9 +687,9 @@ class Command(BaseCommand):
         if deleted > 0:
             player_discord = self.bot.get_user(int(player.discord_id))
             mention = player_discord.mention if player_discord else player.name
-            await msg.channel.send(TRANSLATIONS[LANG]["queue_kick"].format(mention))
+            await msg.channel.send(t("queue_kick").format(mention))
         else:
-            await msg.channel.send(TRANSLATIONS[LANG]["not_in_queue"].format())
+            await msg.channel.send(t("not_in_queue").format())
 
         await self.queues_show()
 
@@ -723,11 +710,11 @@ class Command(BaseCommand):
 
         victim = Command.get_player_by_name(name)
         if not victim:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+            await msg.channel.send(t("unregistered_user").format(name))
             return
 
         if victim not in queue.players.all():
-            await msg.channel.send(TRANSLATIONS[LANG]["victim_not_in_queue"].format(victim, player))
+            await msg.channel.send(t("victim_not_in_queue").format(victim, player))
             return
 
         votes_needed = LadderSettings.get_solo().votekick_treshold
@@ -736,7 +723,7 @@ class Command(BaseCommand):
         votes.add(player)
 
         voters_str = " 💠 ".join(player.name for player in votes)
-        await msg.channel.send(TRANSLATIONS[LANG]["vote_kick"].format(len(votes), votes_needed, victim, voters_str))
+        await msg.channel.send(t("vote_kick").format(len(votes), votes_needed, victim, voters_str))
 
         if len(votes) >= votes_needed:
             QueuePlayer.objects \
@@ -747,7 +734,7 @@ class Command(BaseCommand):
 
             victim_discord = self.bot.get_user(int(victim.discord_id))
             mention = victim_discord.mention if victim_discord else victim.name
-            await msg.channel.send(TRANSLATIONS[LANG]["vote_kicked"].format(mention))
+            await msg.channel.send(t("vote_kicked").format(mention))
 
             await self.queues_show()
 
@@ -764,13 +751,13 @@ class Command(BaseCommand):
         channel = QueueChannel.objects.get(discord_id=msg.channel.id)
 
         if LadderQueue.objects.filter(channel=channel, active=True).exists():
-            await msg.channel.send(TRANSLATIONS[LANG]["cannot_change_mmr"])
+            await msg.channel.send(t("cannot_change_mmr"))
             return
 
         channel.min_mmr = min_mmr
         channel.save()
 
-        await msg.channel.send(TRANSLATIONS[LANG]["min_mmr"].format(min_mmr))
+        await msg.channel.send(t("min_mmr").format(min_mmr))
 
     async def top_command(self, msg, **kwargs):
         def get_top_players(limit, bottom=False):
@@ -820,11 +807,11 @@ class Command(BaseCommand):
         url = f'{host}{reverse("ladder:player-list-score")}'
 
         if limit < 1:
-            await msg.channel.send(TRANSLATIONS[LANG]["very_funny"])
+            await msg.channel.send(t("very_funny"))
             return
 
         if limit > 15:
-            await msg.channel.send(TRANSLATIONS[LANG]["just_open"].format(url))
+            await msg.channel.send(t("just_open").format(url))
             return
 
         # all is ok, can show top players
@@ -832,7 +819,7 @@ class Command(BaseCommand):
         top_str = '\n'.join(
             f'{p.rank_score:2}. {player_str(p)}' for p in players
         )
-        await msg.channel.send(TRANSLATIONS[LANG]["full_leaderboard"].format(top_str, url))
+        await msg.channel.send(t("full_leaderboard").format(top_str, url))
 
     async def bottom_command(self, msg, **kwargs):
         print(f'\n!bottom command:\n{msg.content}')
@@ -855,7 +842,7 @@ class Command(BaseCommand):
                 if any(not 0 < x < 6 for x in args):
                     raise ValueError
             except ValueError:
-                await msg.channel.send(TRANSLATIONS[LANG]["very_funny"])
+                await msg.channel.send(t("very_funny"))
                 return
 
             # args are fine
@@ -889,15 +876,15 @@ class Command(BaseCommand):
                 else:
                     raise ValueError  # wrong role name
             except ValueError:
-                await msg.channel.send(TRANSLATIONS[LANG]["very_funny"])
+                await msg.channel.send(t("very_funny"))
                 return
         else:
             # !role command without args, show current role prefs
-            await msg.channel.send(TRANSLATIONS[LANG]["current_roles"].format(player.name, roles.carry, roles.mid, roles.offlane, roles.pos4, roles.pos5))
+            await msg.channel.send(t("current_roles").format(player.name, roles.carry, roles.mid, roles.offlane, roles.pos4, roles.pos5))
             return
 
         roles.save()
-        await msg.channel.send(TRANSLATIONS[LANG]["current_roles"].format(player.name, roles.carry, roles.mid, roles.offlane, roles.pos4, roles.pos5))
+        await msg.channel.send(t("current_roles").format(player.name, roles.carry, roles.mid, roles.offlane, roles.pos4, roles.pos5))
 
     async def recent_matches_command(self, msg, **kwargs):
         command = msg.content
@@ -926,7 +913,7 @@ class Command(BaseCommand):
         if name:
             player = Command.get_player_by_name(name)
             if not player:
-                await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+                await msg.channel.send(t("unregistered_user").format(name))
                 return
 
         host = os.environ.get('BASE_URL', 'localhost:8000')
@@ -934,7 +921,7 @@ class Command(BaseCommand):
         player_url = f'{host}{url}'
 
         if not 0 < num < 10:
-            await msg.channel.send(TRANSLATIONS[LANG]["just_open"].format(player_url))
+            await msg.channel.send(t("just_open").format(player_url))
             return
 
         mps = player.matchplayer_set.all()[:num]
@@ -945,7 +932,7 @@ class Command(BaseCommand):
             dotabuff = f'https://www.dotabuff.com/matches/{mp.match.dota_id}'
             return f'│ ` {timeago.format(mp.match.date, timezone.now()):<15}{mp.result:<13}{dotabuff}'
 
-        await msg.channel.send(TRANSLATIONS[LANG]["recent_matches"].format(player, '\n'.join(match_str(x) for x in mps), player_url))
+        await msg.channel.send(t("recent_matches").format(player, '\n'.join(match_str(x) for x in mps), player_url))
 
     async def help_command(self, msg, **kwargs):
         commands_dict = self.get_help_commands()
@@ -955,7 +942,7 @@ class Command(BaseCommand):
             for key, text in texts.items():
                 master_text += key + ": `" + text + "`\n"
 
-        await msg.channel.send(TRANSLATIONS[LANG]["help_command"].format(master_text))
+        await msg.channel.send(t("help_command").format(master_text))
 
     async def admin_help_command(self, msg, **kwargs):
         commands_dict = self.get_admin_help_commands()
@@ -965,13 +952,13 @@ class Command(BaseCommand):
             for key, text in texts.items():
                 master_text += "- " + key + ": `" + text + "`\n"
 
-        await msg.channel.send(TRANSLATIONS[LANG]["admin_help_command"].format(master_text))
+        await msg.channel.send(t("admin_help_command").format(master_text))
 
     async def registration_help_command(self, msg, **kwargs):
         print('!jak command')
         queue_channel = DiscordChannels.get_solo().queues
         # \nMożesz dołączyć do gry na kanale <#{queue_channel}>"""
-        await msg.channel.send(TRANSLATIONS[LANG]["registration_help"].format(queue_channel))
+        await msg.channel.send(t("registration_help").format(queue_channel))
 
     async def set_name_command(self, msg, **kwargs):
         command = msg.content
@@ -984,23 +971,23 @@ class Command(BaseCommand):
             mention = params.split()[0]
             new_name = ' '.join(params.split()[1:])  # rest of the string is a new name
         except (IndexError, ValueError):
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_set_name_usage"])
+            await msg.channel.send(t("wrong_set_name_usage"))
             return
 
         # check if name is a mention
         match = re.match(r'<@!?([0-9]+)>$', mention)
         if not match:
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_set_name_usage"])
+            await msg.channel.send(t("wrong_set_name_usage"))
             return
 
         player = Command.get_player_by_name(mention)
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(mention))
+            await msg.channel.send(t("unregistered_user").format(mention))
             return
 
         player.name = new_name
         player.save()
-        await msg.channel.send(TRANSLATIONS[LANG]["name_change"].format(mention, new_name))
+        await msg.channel.send(t("name_change").format(mention, new_name))
 
     async def rename_myself_command(self, msg, **kwargs):
         command = msg.content
@@ -1008,18 +995,18 @@ class Command(BaseCommand):
 
         player = Player.objects.filter(discord_id=msg.author.id).first()
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_command"].format(msg.author.mention))
+            await msg.channel.send(t("unregistered_command").format(msg.author.mention))
             return
 
         try:
             new_name = command.split(' ', 1)[1]  # Everything after "!rename"
         except IndexError:
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_rename_usage"])
+            await msg.channel.send(t("wrong_rename_usage"))
             return
 
         player.name = new_name
         player.save()
-        await msg.channel.send(TRANSLATIONS[LANG]["name_change"].format(self.player_mention(player), new_name))
+        await msg.channel.send(t("name_change").format(self.player_mention(player), new_name))
 
     async def change_self_dota_id(self, msg, **kwargs):
         command = msg.content
@@ -1058,12 +1045,12 @@ class Command(BaseCommand):
             new_mmr = int(params.split()[-1])
             name = ' '.join(params.split()[:-1])  # remove mmr, leaving only the name
         except (IndexError, ValueError):
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_set_mmr_usage"])
+            await msg.channel.send(t("wrong_set_mmr_usage"))
             return
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+            await msg.channel.send(t("unregistered_user").format(name))
             return
 
         ScoreChange.objects.create(
@@ -1072,7 +1059,7 @@ class Command(BaseCommand):
             season=LadderSettings.get_solo().current_season,
             info=f'Admin action. MMR updated by {admin}'
         )
-        await msg.channel.send(TRANSLATIONS[LANG]["mmr_change"].format(player, new_mmr))
+        await msg.channel.send(t("mmr_change").format(player, new_mmr))
 
     async def set_dota_id_command(self, msg, **kwargs):
         command = msg.content
@@ -1084,17 +1071,17 @@ class Command(BaseCommand):
             dota_id = params.split()[-1]
             name = ' '.join(params.split()[:-1])  # remove dota id, leaving only the name
         except (IndexError, ValueError):
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_set_id_usage"])
+            await msg.channel.send(t("wrong_set_id_usage"))
             return
 
         player = Command.get_player_by_name(name)
         if not player:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_user"].format(name))
+            await msg.channel.send(t("unregistered_user").format(name))
             return
 
         player.dota_id = dota_id
         player.save()
-        await msg.channel.send(TRANSLATIONS[LANG]["id_change"].format(player, dota_id))
+        await msg.channel.send(t("id_change").format(player, dota_id))
 
     async def record_match_command(self, msg, **kwargs):
         command = msg.content
@@ -1106,11 +1093,11 @@ class Command(BaseCommand):
             winner = params.split()[0].lower()
             players = ' '.join(params.split()[1:])  # rest of the string are 10 player mentions
         except (IndexError, ValueError):
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_record_usage"])
+            await msg.channel.send(t("wrong_record_usage"))
             return
 
         if winner not in ['radiant', 'dire']:
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_winner"])
+            await msg.channel.send(t("wrong_winner"))
             return
 
         players = re.findall(r'<@!?([0-9]+)>', players)
@@ -1118,7 +1105,7 @@ class Command(BaseCommand):
 
         # check if we have 10 mentions of players
         if len(players) != 10:
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_record_usage"])
+            await msg.channel.send(t("wrong_record_usage"))
             return
 
         radiant = Player.objects.filter(discord_id__in=players[:5])
@@ -1129,7 +1116,7 @@ class Command(BaseCommand):
 
         # check if all mentioned players are registered as players
         if len(radiant) != 5 or len(dire) != 5:
-            await msg.channel.send(TRANSLATIONS[LANG]["unregistered_mentioned"])
+            await msg.channel.send(t("unregistered_mentioned"))
             return
 
         _radiant = [(p.name, p.ladder_mmr) for p in radiant]
@@ -1139,7 +1126,7 @@ class Command(BaseCommand):
         balance = BalanceAnswerManager.balance_custom([_radiant, _dire])
         MatchManager.record_balance(balance, winner)
 
-        await msg.channel.send(TRANSLATIONS[LANG]["match_recorded"].format(", ".join([p.name for p in radiant]), ", ".join([p.name for p in dire]), "Radiant" if winner == 0 else "Dire"))
+        await msg.channel.send(t("match_recorded").format(", ".join([p.name for p in radiant]), ", ".join([p.name for p in dire]), "Radiant" if winner == 0 else "Dire"))
 
     async def record_match_from_queue(self, msg, **kwargs):
         command = msg.content
@@ -1200,13 +1187,13 @@ class Command(BaseCommand):
         try:
             qnumber = int(command.split(' ')[1])
         except (IndexError, ValueError):
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_close_usage"])
+            await msg.channel.send(t("wrong_close_usage"))
             return
 
         try:
             queue = LadderQueue.objects.get(id=qnumber)
         except LadderQueue.DoesNotExist:
-            await msg.channel.send(TRANSLATIONS[LANG]["wrong_close_usage"])
+            await msg.channel.send(t("wrong_close_usage"))
             return
 
         queue.active = False
@@ -1215,27 +1202,27 @@ class Command(BaseCommand):
         queue.save()
 
         await self.queues_show()
-        await msg.channel.send(TRANSLATIONS[LANG]["queue_close"].format(qnumber))
+        await msg.channel.send(t("queue_close").format(qnumber))
 
     async def player_join_queue(self, player, channel):
         # check if player is banned
         if player.banned:
-            response = TRANSLATIONS[LANG]["banned"].format(player)
+            response = t("banned").format(player)
             return None, False, response
 
         # check if player is vouched
         if not player.vouched:
-            response = TRANSLATIONS[LANG]["not_vouched"].format(player)
+            response = t("not_vouched").format(player)
             return None, False, response
 
         # check if player has enough MMR
         if player.filter_mmr < channel.min_mmr:
-            response = TRANSLATIONS[LANG]["mmr_too_low"].format(player)
+            response = t("mmr_too_low").format(player)
             return None, False, response
 
         # check if player's mmr does not exceed limit, if there's any
         if player.filter_mmr > channel.max_mmr > 0:
-            response = TRANSLATIONS[LANG]["mmr_too_big"].format(player)
+            response = t("mmr_too_big").format(player)
             return None, False, response
 
         queue = player.ladderqueue_set.filter(
@@ -1246,12 +1233,12 @@ class Command(BaseCommand):
         if queue:
             # check that player is not in this queue already
             if queue.channel == channel:
-                response = TRANSLATIONS[LANG]["already_in_this_queue"].format(player)
+                response = t("already_in_this_queue").format(player)
                 return queue, False, response
 
             # check that player is not already in a full queue
             if queue.players.count() == 10:
-                response = TRANSLATIONS[LANG]["already_in_full_queue"].format(player)
+                response = t("already_in_full_queue").format(player)
                 return None, False, response
 
         # remove player from other queues
@@ -1262,7 +1249,7 @@ class Command(BaseCommand):
 
         queue = Command.add_player_to_queue(player, channel)
 
-        response = TRANSLATIONS[LANG]["joined_inhouse"].format(player, queue.id)
+        response = t("joined_inhouse").format(player, queue.id)
 
         is_queue_full = False
         # TODO: this is a separate function
@@ -1271,8 +1258,8 @@ class Command(BaseCommand):
             Command.balance_queue(queue)  # todo move this to QueuePlayer signal
 
             mention_str = f' '.join(self.player_mention(p) for p in queue.players.all())
-            finalize = TRANSLATIONS[LANG]["proposed_balance"].format('', mention_str, WAITING_TIME_MINS)
-            response = TRANSLATIONS[LANG]["joined_inhouse"].format(player, queue.id)
+            finalize = t("proposed_balance").format('', mention_str, WAITING_TIME_MINS)
+            response = t("joined_inhouse").format(player, queue.id)
           
             await self.queues_channel.send(finalize)
             await self.chat_channel.send(finalize)
@@ -1378,7 +1365,8 @@ class Command(BaseCommand):
         game_str = ''
         if q.game_start_time:
 
-            time_game = int((datetime.timestamp(timezone.now()) - datetime.timestamp(q.game_start_time))\60)
+            time_difference_in_seconds = datetime.timestamp(timezone.now()) - datetime.timestamp(q.game_start_time)
+            time_game = round(time_difference_in_seconds / 60)
 
             radiant, dire, radiant_mmr, dire_mmr = Command.get_teams_from_queue(q)
 
@@ -1388,9 +1376,9 @@ class Command(BaseCommand):
             radiant_str = "\n".join([f'{i+1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in enumerate(radiant)])
             dire_str = "\n".join([f'{i+1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in enumerate(dire)])
 
-            return TRANSLATIONS[LANG]["game_start"].format(q.id, time_game, radiant_mmr, radiant_str, dire_mmr, dire_str, q.id, q.game_server)
+            return t("game_start").format(q.id, time_game, radiant_mmr, radiant_str, dire_mmr, dire_str, q.id, q.game_server)
 
-        return TRANSLATIONS[LANG]["queue_str"].format(
+        return t("queue_str").format(
             q.id,
             avg_mmr,
             "\n".join([f'{i + 1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in
@@ -1424,9 +1412,9 @@ class Command(BaseCommand):
         balance_str = ''
         auto_balance = LadderSettings.get_solo().draft_mode == LadderSettings.AUTO_BALANCE
         if auto_balance and show_balance:
-            balance_str = TRANSLATIONS[LANG]["balance_str"].format(Command.balance_str(queue.balance))
+            balance_str = t("balance_str").format(Command.balance_str(queue.balance))
 
-        return TRANSLATIONS[LANG]["proposed_balance"].format(balance_str, f' '.join(self.player_mention(p) for p in queue.players.all()), WAITING_TIME_MINS)
+        return t("proposed_balance").format(balance_str, f' '.join(self.player_mention(p) for p in queue.players.all()), WAITING_TIME_MINS)
 
     def player_mention(self, player):
         discord_id = int(player.discord_id) if player.discord_id else 0
@@ -1464,7 +1452,7 @@ class Command(BaseCommand):
         if ping_list:
             afk_response_time = LadderSettings.get_solo().afk_response_time
 
-            msg = await channel.send(TRANSLATIONS[LANG]["afk_check"].format(" ".join(self.player_mention(p) for p in ping_list), afk_response_time))
+            msg = await channel.send(t("afk_check").format(" ".join(self.player_mention(p) for p in ping_list), afk_response_time))
             await msg.add_reaction('👌')
             await asyncio.sleep(afk_response_time * 60)
 
@@ -1482,7 +1470,7 @@ class Command(BaseCommand):
         #
         # if deleted > 0:
         #     await self.queues_show()
-        #     await channel.send(TRANSLATIONS[LANG]["purge"].format(' | '.join(p.name for p in afk_list)))
+        #     await channel.send(t("purge").format(' | '.join(p.name for p in afk_list)))
         #
 
     async def purge_queue_channels(self):
@@ -1530,7 +1518,7 @@ class Command(BaseCommand):
                 .filter(Q(active=True) |
                         Q(game_start_time__isnull=False) & Q(game_end_time__isnull=True))
 
-            queues_text = TRANSLATIONS[LANG]["no_queue"]
+            queues_text = t("no_queue")
             if queues:
                 queues_text =  f'\n'.join(self.show_queue(q) for q in queues)
 
@@ -1598,13 +1586,13 @@ class Command(BaseCommand):
         full_queue = next((q for q in qs if q.players_in_queue == 10), None)
 
         if full_queue:
-            return TRANSLATIONS[LANG]["in_game"].format(player.name, full_queue.queue.id)
+            return t("in_game").format(player.name, full_queue.queue.id)
 
         deleted, _ = qs.delete()
         if deleted > 0:
-            return TRANSLATIONS[LANG]["player_queue_leave"].format(player.name)
+            return t("player_queue_leave").format(player.name)
         else:
-            return TRANSLATIONS[LANG]["not_in_this_queue"].format(player.name)
+            return t("not_in_this_queue").format(player.name)
 
     async def handle_report_tip_command(self, msg, is_tip: bool, **kwargs):
         # Prevent bot from responding to its own messages
@@ -1613,25 +1601,23 @@ class Command(BaseCommand):
 
         # Check if the message is a private message
         if not msg.guild is None and is_tip == False:
-            # Respond to the message
-            await msg.channel.send(TRANSLATIONS[LANG]["report_in_dm"])
+            await msg.channel.send(t("report_in_dm"))
             return
 
         parts = msg.content.split()
-        if len(parts) < 3:
-            await msg.channel.send(INVALID_FORMAT_MESSAGE)
+        if len(parts) < 2:
+            await msg.channel.send(t("report_tip_format"))
             return
 
-        # Assume the command format is "!command ReportedPlayer Reason [MatchID] Comment"
+        # Assume the command format is "!command ReportedPlayer [MatchID] Comment"
         reported_name = parts[1]
-        reason = parts[2]
         match_id = None
-        comment_index = 3
+        comment_index = 2
 
-        # If the fourth part is a digit, it's considered a MatchID, and the comment starts from the fifth part
-        if len(parts) > 3 and parts[3].isdigit():
-            match_id = parts[3]
-            comment_index = 4
+        # If the fourth part is a digit, it's considered a MatchID, and the comment starts from the fourth part
+        if len(parts) > 2 and parts[2].isdigit():
+            match_id = parts[2]
+            comment_index = 3
 
         comment = " ".join(parts[comment_index:])
 
@@ -1641,27 +1627,26 @@ class Command(BaseCommand):
             reported = Command.get_player_by_name(reported_name)
 
             if reporter == reported:
-                await msg.channel.send(CANNOT_REPORT_SELF)
+                await msg.channel.send(t("report_cannot_self"))
                 return
 
             # Call the appropriate method from ReportTipCommands
             if is_tip:
-                result = self.report_tip_commands.tip_player_command(reporter, reported, reason, match_id, comment)
+                result = self.report_tip_commands.tip_player_command(reporter, reported, match_id, comment)
             else:
-                result = self.report_tip_commands.report_player_command(reporter, reported, reason, match_id, comment)
+                result = self.report_tip_commands.report_player_command(reporter, reported, match_id, comment)
 
             if isinstance(result, PlayerReport):
                 # Determine the message format based on the value of the result
                 if result.value > 0:
-                    message_template = TIP_SUCCESS_MESSAGE
+                    message_template = t("tip_success_msg")
                 else:
-                    message_template = REPORT_SUCCESS_MESSAGE
+                    message_template = t("report_success_msg")
 
                 # Construct the custom success message using data from the PlayerReport instance
                 custom_message = message_template.format(
                     self.player_mention(result.from_player),  # Reporter's or tipper's name
                     self.player_mention(result.to_player),  # Reported or tipped player's name
-                    result.reason,  # Reason for the report or tip
                     result.match.dota_id,  # Match ID, or indicate it's the last match
                     f"`{result.comment}`"  # Comment"
                 )
@@ -1671,51 +1656,52 @@ class Command(BaseCommand):
                 await msg.channel.send(result)
 
         except Player.DoesNotExist:
-            await msg.channel.send(PLAYER_NOT_FOUND_MESSAGE)
+            await msg.channel.send(t("report_could_not_find_players"))
         except Exception as e:
+            print(str(e))
             await msg.channel.send(f"{str(e)}")
 
     def get_help_commands(self):
         return {
             'Basic': {
-                '!help': TRANSLATIONS[LANG]["!help"],
-                '!jak/!info': TRANSLATIONS[LANG]["!jak/!info"],
-                '!r/!reg': TRANSLATIONS[LANG]["!r/!reg"],
-                '!register': TRANSLATIONS[LANG]["!register"],
-                '!wh/!who/!whois/!profile/!stats': TRANSLATIONS[LANG]["!wh/!who/!whois/!profile/!stats"],
-                '!top': TRANSLATIONS[LANG]["!top"],
-                '!bot/!bottom': TRANSLATIONS[LANG]["!bot/!bottom"],
-                '!role/!roles': TRANSLATIONS[LANG]["!r/!reg"],
-                '!recent': TRANSLATIONS[LANG]["!recent"],
-                '!report': TRANSLATIONS[LANG]["!report"],
-                '!tip': TRANSLATIONS[LANG]["!tip"],
-                '!reports': TRANSLATIONS[LANG]["!reports"],
-                '!tips': TRANSLATIONS[LANG]["!tips"],
+                '!help': t("!help"),
+                '!jak/!info': t("!jak/!info"),
+                '!r/!reg': t("!r/!reg"),
+                '!register': t("!register"),
+                '!wh/!who/!whois/!profile/!stats': t("!wh/!who/!whois/!profile/!stats"),
+                '!top': t("!top"),
+                '!bot/!bottom': t("!bot/!bottom"),
+                '!role/!roles': t("!r/!reg"),
+                '!recent': t("!recent"),
+                '!report': t("!report"),
+                '!tip': t("!tip"),
+                '!reports': t("!reports"),
+                '!tips': t("!tips"),
             },
             'Queue': {
-                '!vk/!votekick': TRANSLATIONS[LANG]["!vk/!votekick"],
+                '!vk/!votekick': t("!vk/!votekick"),
             }
         }
 
     def get_admin_help_commands(self):
         return  {
             'Queue': {
-                '!vk/!votekick': TRANSLATIONS[LANG]["!vk/!votekick"],
+                '!vk/!votekick': t("!vk/!votekick"),
             },
             'Admin': {
-                '!vouch': TRANSLATIONS[LANG]["!vouch"],
-                '!ban': TRANSLATIONS[LANG]["!ban"],
-                '!unban': TRANSLATIONS[LANG]["!unban"],
-                '!set-mmr/!adjust': TRANSLATIONS[LANG]["!set-mmr/!adjust"],
-                '!set-dota-id': TRANSLATIONS[LANG]["!set-dota-id"],
+                '!vouch': t("!vouch"),
+                '!ban': t("!ban"),
+                '!unban': t("!unban"),
+                '!set-mmr/!adjust': t("!set-mmr/!adjust"),
+                '!set-dota-id': t("!set-dota-id"),
             },
             'AdminQueue': {
-                '!add': TRANSLATIONS[LANG]["!add"],
-                '!kick': TRANSLATIONS[LANG]["!kick"],
-                '!close': TRANSLATIONS[LANG]["!close"],
-                '!record-match': TRANSLATIONS[LANG]["!record-match"],
-                '!mmr': TRANSLATIONS[LANG]["!mmr"],
-                '!set-name/!rename': TRANSLATIONS[LANG]["!set-name/!rename"],
+                '!add': t("!add"),
+                '!kick': t("!kick"),
+                '!close': t("!close"),
+                '!record-match': t("!record-match"),
+                '!mmr': t("!mmr"),
+                '!set-name/!rename': t("!set-name/!rename"),
             }
         }
 
