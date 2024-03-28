@@ -126,11 +126,11 @@ class Command(BaseCommand):
 
         @self.bot.event
         async def on_message(msg):
+            await on_register_form_answer(msg)
+
             if msg.guild is None:
                 await self.bot_cmd(msg)
                 return
-
-            await on_register_form_answer(msg)
             self.last_seen[msg.author.id] = timezone.now()
 
             if not QueueChannel.objects.filter(discord_id=msg.channel.id).exists() \
@@ -170,7 +170,7 @@ class Command(BaseCommand):
                     await interaction.defer()
                     return
 
-                text = t("register_form").format({self.unregistered_mention(interaction.author)})
+                text = t("register_msg").format({self.unregistered_mention(interaction.author)})
 
                 await interaction.author.send(text)
 
