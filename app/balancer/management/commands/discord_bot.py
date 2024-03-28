@@ -39,6 +39,8 @@ def is_player_registered(msg, dota_id, name):
     if Player.objects.filter(name__iexact=name).exists():
         return True
 
+def escape_underscore(player_name):
+    return player_name.replace("_", "-")
 
 class Command(BaseCommand):
     REGISTER_MSG_TEXT = t("register_msg")
@@ -511,11 +513,11 @@ class Command(BaseCommand):
 
         if tips.exists():
             tips_list = '\n'.join(
-                [f"│ 👍 <{tip.from_player.name}> [{tip.comment}] (Mecz: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
+                [f"│ 👍 <{escape_underscore(tip.from_player.name)}> [{tip.comment}] (Mecz: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
                  tips])
-            await msg.channel.send(t("show_tips").format(player.name, tips_list));
+            await msg.channel.send(t("show_tips").format(escape_underscore(player.name), tips_list));
         else:
-            await msg.channel.send(t("no_tips").format(player.name));
+            await msg.channel.send(t("no_tips").format(escape_underscore(player.name)));
 
     async def handle_show_reports_command(self, msg, **kwargs):
         # Extract the player name from the message
@@ -536,15 +538,15 @@ class Command(BaseCommand):
         one_day_ago = timezone.now() - timedelta(days=1)
 
         # Fetch all tips for the player
-        tips = PlayerReport.objects.filter(to_player=player, value__lt=0, report_date__lt=one_day_ago).order_by('-id')[:5]
+        reports = PlayerReport.objects.filter(to_player=player, value__lt=0, report_date__lt=one_day_ago).order_by('-id')[:5]
 
-        if tips.exists():
+        if reports.exists():
             tips_list = '\n'.join(
-                [f"│ ☠️ <{tip.from_player.name}> [{tip.comment}] (Mecz: {tip.match.dota_id if tip.match else 'N/A'})" for tip in
-                 tips])
-            await msg.channel.send(t("show_reports").format(player.name, tips_list))
+                [f"│ ☠️ <{escape_underscore(report.from_player.name)}> [{report.comment}] (Mecz: {report.match.dota_id if report.match else 'N/A'})" for report in
+                 reports])
+            await msg.channel.send(t("show_reports").format(escape_underscore(player.name), tips_list))
         else:
-            await msg.channel.send(t("no_reports").format(player.name))
+            await msg.channel.send(t("no_reports").format(escape_underscore(player.name)))
 
     async def ban_command(self, msg, **kwargs):
         command = msg.content
@@ -1022,19 +1024,19 @@ class Command(BaseCommand):
 
         player = Player.objects.filter(discord_id=str(msg.author.id)).first()
         if not player:
-            await msg.channel.send('I don\'t know him')
+            await msg.channel.send(t("unregistered_user").format(self.unregistered_mention(msg.author)))
             return
 
         try:
             _, friend_id = command.split(' ', 1)
-        except IndexError:
-            await msg.channel.send('Usage: `!steam FRIEND_ID`. Example: `!steam 1337131338`')
+        except (ValueError, IndexError):
+            await msg.channel.send(t("!my_dota_id_usage"))
             return
 
         if friend_id.isdigit():
             player.dota_id = friend_id
             player.save()  # Save the updated Player object to the database
-            await msg.channel.send('{} your Dota ID has been updated to: {}'.format(
+            await msg.channel.send(t("player_updated_dota_id").format(
                 self.player_mention(player),
                 friend_id)
             )
@@ -1693,22 +1695,17 @@ class Command(BaseCommand):
 
     def get_admin_help_commands(self):
         return  {
-            'Queue': {
-                '!vk/!votekick': t("!vk/!votekick"),
-            },
             'Admin': {
                 '!vouch': t("!vouch"),
                 '!ban': t("!ban"),
                 '!unban': t("!unban"),
-                '!set-mmr/!adjust': t("!set-mmr/!adjust"),
+                '!set-mmr': t("!set-mmr/!adjust"),
                 '!set-dota-id': t("!set-dota-id"),
             },
             'AdminQueue': {
-                '!add': t("!add"),
-                '!kick': t("!kick"),
                 '!close': t("!close"),
                 '!record-match': t("!record-match"),
-                '!mmr': t("!mmr"),
+                '!record-queue': t("!record-queue"),
                 '!set-name/!rename': t("!set-name/!rename"),
             }
         }
