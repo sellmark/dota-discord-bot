@@ -467,7 +467,7 @@ class Command(BaseCommand):
                 if len(s) > winning_streak and s[0] == "win":
                     winning_streak = len(s)
                 if len(s) > losing_streak and s[0] == "loss":
-                    winning_streak = len(s)
+                    losing_streak = len(s)
 
         await msg.channel.send(t("whois_stats").format(
             escaped_name,
@@ -1266,12 +1266,15 @@ class Command(BaseCommand):
         if queue.players.count() == 10:
             is_queue_full = True
             Command.balance_queue(queue)  # todo move this to QueuePlayer signal
+            # response = TRANSLATIONS[LANG]["balance_str"].format(Command.balance_str(queue.balance))
 
             mention_str = f' '.join(self.player_mention(p) for p in queue.players.all())
+            # "proposed_balance": "Kolejka jest pełna\n{}\n{}\nMasz {} min aby dołączyć do poczekalni",
+            #   "balance_str": "Proponowany balans:\n{}",
             finalize = t("proposed_balance").format('', mention_str, WAITING_TIME_MINS)
             response = t("joined_inhouse").format(player, queue.id)
-          
-            await self.queues_channel.send(finalize)
+
+            # await self.queues_channel.send(finalize)
             await self.chat_channel.send(finalize)
 
         return queue, True, response
@@ -1332,15 +1335,19 @@ class Command(BaseCommand):
             else:
                 # balance without roles
                 player_names = [p[0] for p in team['players']]
-            result += f'Team {i + 1} {"↡" if i == underdog else " "} ' \
-                      f'(avg. {team["mmr"]}): ' \
+
+            team_name = "Radiant" if i == 0 else "Dire"
+            result += f'{team_name} {"🐶" if i == underdog else " "} ' \
+                      f'(śr. {team["mmr"]}): ' \
                       f'{" | ".join(player_names)}\n'
 
         if verbose:
             result += '\nLadder MMR: \n'
             for i, team in enumerate(balance.teams):
                 player_mmrs = [str(p[1]) for p in team['players']]
-                result += f'Team {i + 1} {"↡" if i == underdog else " "} ' \
+                team_name = "Radiant" if i == 0 else "Dire"
+
+                result += f'{team_name} {"🐶" if i == underdog else " "} ' \
                           f'(avg. {team["mmr"]}): ' \
                           f'{" | ".join(player_mmrs)}\n'
 
@@ -1373,18 +1380,17 @@ class Command(BaseCommand):
         avg_mmr = round(mean(p.ladder_mmr for p in players))
 
         game_str = ''
-        if q.game_start_time:
 
-            time_difference_in_seconds = datetime.timestamp(timezone.now()) - datetime.timestamp(q.game_start_time)
-            time_game = round(time_difference_in_seconds / 60)
-
+        if players.count() == 10:
             radiant, dire, radiant_mmr, dire_mmr = Command.get_teams_from_queue(q)
-
             _radiant = [(p.name, p.ladder_mmr) for p in radiant]
             _dire = [(p.name, p.ladder_mmr) for p in dire]
-
             radiant_str = "\n".join([f'{i+1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in enumerate(radiant)])
             dire_str = "\n".join([f'{i+1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in enumerate(dire)])
+            time_game = t("please_join_lobby")
+            if q.game_start_time:
+                time_difference_in_seconds = datetime.timestamp(timezone.now()) - datetime.timestamp(q.game_start_time)
+                time_game = "od: " + str(round(time_difference_in_seconds / 60)) + " min"
 
             return t("game_start").format(q.id, time_game, radiant_mmr, radiant_str, dire_mmr, dire_str, q.id, q.game_server)
 
@@ -1394,6 +1400,7 @@ class Command(BaseCommand):
             "\n".join([f'{i + 1}. ' + "{:<15}".format(f'[#{p.rank_score}][{p.ladder_mmr}]') + f'<{p.name}>' for i, p in
                        enumerate(players)])
         )
+
 
     @staticmethod
     def roles_str(roles: RolesPreference):
