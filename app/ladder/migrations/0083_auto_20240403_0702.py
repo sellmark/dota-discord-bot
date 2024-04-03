@@ -4,11 +4,15 @@ from __future__ import unicode_literals
 
 from django.db import migrations
 
+import os
+
 class Migration(migrations.Migration):
 
     dependencies = [
         ('ladder', '0082_auto_20240315_1504'),
     ]
+
+    db_name = os.environ.get('DB_NAME', 'default_db_name')
 
     operations = [
         migrations.RunSQL(
