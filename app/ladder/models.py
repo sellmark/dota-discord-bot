@@ -245,7 +245,6 @@ class PlayerReport(models.Model):
     from_player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='report_from')
     to_player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='report_to')
     match = models.ForeignKey(Match, on_delete=models.CASCADE)
-    reason = models.CharField(max_length=32)
     comment = models.CharField(max_length=255, blank=True)
     value = models.SmallIntegerField(choices=[(1, 'Positive'), (-1, 'Negative')])
     report_date = models.DateTimeField(auto_now_add=True)  # Automatically set the field to now when the object is first created

@@ -35,7 +35,6 @@ class ReportTipCommands:
                 from_player=reporter,
                 to_player=reported,
                 match=match,
-                reason='dump_this_column',
                 comment=comment,
                 value=report_value
             )

@@ -105,9 +105,9 @@ class MatchAdmin(admin.ModelAdmin):
 
 
 class PlayerReportAdmin(admin.ModelAdmin):
-    list_display = ('from_player', 'to_player', 'reason', 'comment', 'value', 'report_date')
-    search_fields = ('from_player__name', 'to_player__name', 'reason')
-    list_filter = ('reason', 'value')
+    list_display = ('from_player', 'to_player', 'comment', 'value', 'report_date')
+    search_fields = ('from_player__name', 'to_player__name')
+    list_filter = ('value',)
     date_hierarchy = 'report_date'  # Assuming you have a field `report_date` for when the report was created
     ordering = ('-report_date',)
 

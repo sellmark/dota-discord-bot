@@ -154,7 +154,6 @@
                     <thead>
                         <tr>
                             <th>Tipped By</th>
-                            <th>Reason</th>
                             <th>Comment</th>
                             <th>Date</th>
                         </tr>
@@ -163,7 +162,6 @@
                     {% for tip in tips %}
                         <tr>
                             <td>{{ tip.from_player.name }}</td>
-                            <td>{{ tip.reason }}</td>
                             <td>{{ tip.comment }}</td>
                             <td>{{ tip.report_date|date:"Y-m-d H:i" }}</td>
                         </tr>
@@ -182,7 +180,6 @@
                     <thead>
                         <tr>
                             <th>Reported By</th>
-                            <th>Reason</th>
                             <th>Comment</th>
                             <th>Date</th>
                         </tr>
@@ -191,7 +188,6 @@
                     {% for report in reports %}
                         <tr>
                             <td>{{ report.from_player.name }}</td>
-                            <td>{{ report.reason }}</td>
                             <td>{{ report.comment }}</td>
                             <td>{{ report.report_date|date:"Y-m-d H:i" }}</td>
                         </tr>
