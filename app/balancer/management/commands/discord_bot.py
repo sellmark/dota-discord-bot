@@ -76,13 +76,18 @@ class Command(BaseCommand):
 
         intents = discord.Intents.default()
         intents.members = True
+        intents.guilds = True
 
         self.bot = discord.Client(intents=intents)
 
         @self.bot.event
         async def on_ready():
             print(f'Logged in: {self.bot.user} {self.bot.user.id}')
+            for guild in self.bot.guilds:
+                print(f"- {guild.name} (ID: {guild.id})")
 
+            # for emoji in self.bot.emojis:
+            #     print(f"{emoji.name}: {emoji.id}")
             queues_channel = DiscordChannels.get_solo().queues
             chat_channel = DiscordChannels.get_solo().chat
             queue_status_voice_channel = DiscordChannels.get_solo().queue_counter
@@ -458,7 +463,6 @@ class Command(BaseCommand):
         losing_streak = 0
         winning_streak = 0
         escaped_name = player.name.replace('_', '-')
-        print([player.name, escaped_name])
 
         if len(streaks):
             streak = streaks[0]
@@ -542,7 +546,7 @@ class Command(BaseCommand):
 
         if reports.exists():
             tips_list = '\n'.join(
-                [f"│ ☠️ <{escape_underscore(report.from_player.name)}> [{report.comment}] (Mecz: {report.match.dota_id if report.match else 'N/A'})" for report in
+                [f"│ ☢️ <{escape_underscore(report.from_player.name)}> [{report.comment}] (Mecz: {report.match.dota_id if report.match else 'N/A'})" for report in
                  reports])
             await msg.channel.send(t("show_reports").format(escape_underscore(player.name), tips_list))
         else:
@@ -637,7 +641,7 @@ class Command(BaseCommand):
 
     async def add_to_queue_command(self, msg, **kwargs):
         command = msg.content
-        print(f'add_to_queue command from:\n {command}')
+        print(f'Add_to_queue command from:\n {command}')
 
         try:
             name = command.split(None, 1)[1]
@@ -1121,9 +1125,6 @@ class Command(BaseCommand):
         radiant = Player.objects.filter(discord_id__in=players[:5])
         dire = Player.objects.filter(discord_id__in=players[5:])
 
-        print(f'radiant: {radiant}')
-        print(f'dire: {dire}')
-
         # check if all mentioned players are registered as players
         if len(radiant) != 5 or len(dire) != 5:
             await msg.channel.send(t("unregistered_mentioned"))
@@ -1271,7 +1272,11 @@ class Command(BaseCommand):
             mention_str = f' '.join(self.player_mention(p) for p in queue.players.all())
             # "proposed_balance": "Kolejka jest pełna\n{}\n{}\nMasz {} min aby dołączyć do poczekalni",
             #   "balance_str": "Proponowany balans:\n{}",
-            finalize = t("proposed_balance").format('', mention_str, WAITING_TIME_MINS)
+            emoji = discord.utils.get(self.bot.emojis, id=968636489271476224) # Akek
+            if not emoji:
+                emoji = discord.utils.get(self.bot.emojis, id=1224958910599925785)  # dotaCraft hole fallback
+
+            finalize = t("proposed_balance").format(queue.id, emoji, mention_str, WAITING_TIME_MINS)
             response = t("joined_inhouse").format(player, queue.id)
 
             # await self.queues_channel.send(finalize)
@@ -1676,7 +1681,7 @@ class Command(BaseCommand):
             await msg.channel.send(t("report_could_not_find_players"))
         except Exception as e:
             print(str(e))
-            await msg.channel.send(f"{str(e)}")
+            await msg.channel.send("Error occurred in the bot script.")
 
     def get_help_commands(self):
         return {
