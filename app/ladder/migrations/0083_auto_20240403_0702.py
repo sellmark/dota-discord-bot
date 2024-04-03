@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            sql="ALTER DATABASE `db` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;",
+            sql=f"ALTER DATABASE `{db_name}` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;",
             reverse_sql=migrations.RunSQL.noop,
             # Assuming there's no need for a reverse operation for the database collation
         ),
