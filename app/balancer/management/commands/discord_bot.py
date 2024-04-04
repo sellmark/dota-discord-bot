@@ -396,7 +396,8 @@ class Command(BaseCommand):
         queue_channel = DiscordChannels.get_solo().queues
         chat_channel = DiscordChannels.get_solo().chat
         channel = self.bot.get_channel(chat_channel)
-        await msg.channel.send(t("welcome").format(name, queue_channel))
+        if msg.guild is None:
+            await msg.channel.send(t("welcome").format(name, queue_channel))
 
         await channel.send(t("welcome").format(name, queue_channel))
 
