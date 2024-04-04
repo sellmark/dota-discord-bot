@@ -94,6 +94,10 @@ class Player(models.Model):
         if created:
             PlayerManager.init_score(self, reset_mmr=True)
 
+    def get_last_match_dota_id(self):
+        last_match = self.matchplayer_set.order_by('-match__date').first()
+        return last_match.match.dota_id if last_match else None
+
 
 class Match(models.Model):
     players = models.ManyToManyField(Player, through='MatchPlayer')
@@ -169,6 +173,7 @@ class DiscordChannels(SingletonModel):
     polls = models.BigIntegerField(null=True, blank=True)
     queues = models.BigIntegerField(null=True, blank=True)
     chat = models.BigIntegerField(null=True, blank=True)
+    queue_counter = models.BigIntegerField(null=True, blank=True)
 
 
 class DiscordPoll(models.Model):
@@ -233,3 +238,21 @@ class QueuePlayer(models.Model):
 
     class Meta:
         unique_together = ('player', 'queue')
+
+
+
+class PlayerReport(models.Model):
+    from_player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='report_from')
+    to_player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='report_to')
+    match = models.ForeignKey(Match, on_delete=models.CASCADE)
+    comment = models.CharField(max_length=255, blank=True)
+    value = models.SmallIntegerField(choices=[(1, 'Positive'), (-1, 'Negative')])
+    report_date = models.DateTimeField(auto_now_add=True)  # Automatically set the field to now when the object is first created
+
+    class Meta:
+        # Optionally, add some meta options, like ordering or unique constraints
+        # For example, ensuring a player can only report another player for a match once:
+        unique_together = ('from_player', 'to_player', 'match')
+
+    def __str__(self):
+        return f'Report from {self.from_player.name} to {self.to_player.name} for match {self.match.id}'

@@ -10,6 +10,8 @@ services:
       MYSQL_DATABASE: db # 9938_dotabot
       MYSQL_USER: dbuser # 9938_dotabot
       MYSQL_PASSWORD: dbpass #
+      MYSQL_CHARACTER_SET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
       - "3306:3306"  # Map port 3306 of the container to port 3306 on the host
     volumes:
