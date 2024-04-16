@@ -45,6 +45,7 @@
   "id_change": "ID gracza {} zostało zmienione na {}",
   "in_game": "{} jesteś w aktywnej grze nr #{}.",
   "invalid_nickname": "{} jest coś nie tak z Twoją nową nazwą.",
+  "invalid_report_comment": "{} jest coś nie tak z Twoim komentarzem.",
   "joined_inhouse": "{} właśnie dołączył do kolejki meczu ligowego!\n{}",
   "joke": "Play for fun! Who cares! ({})",
   "joke_bot": "this command is disabled when Panda is on the list",
