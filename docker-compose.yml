@@ -16,6 +16,12 @@ services:
       - "3306:3306"  # Map port 3306 of the container to port 3306 on the host
     volumes:
       - my_db_data:/var/lib/mysql  # Persist database data
+    networks:
+      - app-network
 
 volumes:
   my_db_data:  # This names the volume where your database data is stored
+  
+networks:
+  app-network:
+    driver: bridge

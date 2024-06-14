@@ -43,7 +43,7 @@ def escape_underscore(player_name):
     return player_name.replace("_", "-")
 
 escaping_pattern = (
-    r'^[a-zA-Z0-9\-\|\\/\s\!\@\#\$\%\^\&\*\(\)\_\+]*'  # Allows alphanumeric, hyphen, underscore, pipe, backslash, forward slash, spaces, and special characters from SHIFT+1 to SHIFT+0 on a US keyboard, plus pluses
+    r'^[a-zA-Z0-9ąĄćĆęĘłŁńŃóÓśŚźŹżŻ\-\|\\/\s\!\@\#\$\%\^\&\*\(\)\_\+]*'  # Allows alphanumeric, hyphen, underscore, pipe, backslash, forward slash, spaces, and special characters from SHIFT+1 to SHIFT+0 on a US keyboard, plus pluses
     r'('
         r'[\U0001F600-\U0001F64F]'  # Emoticons
         r'|[\U0001F300-\U0001F5FF]'  # Misc Symbols and Pictographs
@@ -57,7 +57,7 @@ escaping_pattern = (
         r'|[\U00002702-\U000027B0]'  # Dingbats
         r'|[\U000024C2-\U0001F251]'  # Enclosed characters
     r')*'
-    r'[a-zA-Z0-9\-\|\\/\s\!\@\#\$\%\^\&\*\(\)\_\+]*$'  # Ending with any amount of alphanumeric and allowed symbols
+    r'[a-zA-Z0-99ąĄćĆęĘłŁńŃóÓśŚźŹżŻ\-\|\\/\s\!\@\#\$\%\^\&\*\(\)\_\+]*$'  # Ending with any amount of alphanumeric and allowed symbols
 )
 
 class Command(BaseCommand):
@@ -122,7 +122,7 @@ class Command(BaseCommand):
             await self.setup_queue_messages()
 
             # MAREK: Disabled checking for AFK players
-            # queue_afk_check.start()
+            queue_afk_check.start()
 
             update_queues_shown.start()
             update_voice_channel.start()
@@ -1511,16 +1511,16 @@ class Command(BaseCommand):
         if not afk_list:
             return
 
-        # deleted, _ = QueuePlayer.objects\
-        #     .filter(player__in=afk_list, queue__active=True)\
-        #     .annotate(Count('queue__players'))\
-        #     .filter(queue__players__count__lt=10)\
-        #     .delete()
-        #
-        # if deleted > 0:
-        #     await self.queues_show()
-        #     await channel.send(t("purge").format(' | '.join(p.name for p in afk_list)))
-        #
+        deleted, _ = QueuePlayer.objects\
+            .filter(player__in=afk_list, queue__active=True)\
+            .annotate(Count('queue__players'))\
+            .filter(queue__players__count__lt=10)\
+            .delete()
+
+        if deleted > 0:
+            await self.queues_show()
+            await channel.send(t("purge").format(' | '.join(p.name for p in afk_list)))
+
 
     async def purge_queue_channels(self):
         channel = self.queues_channel
